@@ -1,6 +1,3 @@
-### ===================================================
-### 03b. Siamese Network 특징 추출
-### ===================================================
 import tensorflow as tf
 import numpy as np
 import common_config as cfg
@@ -82,7 +79,7 @@ def main():
                     json.dump(current_paths, f, ensure_ascii=False, indent=4)
                 print(f"파일명 리스트 저장 완료: {filename_save_path.name}")
             except Exception as e:
-                print(f"❌ 파일명 리스트 저장 실패: {e}")
+                print(f"파일명 리스트 저장 실패: {e}")
 
             # 통계 업데이트
             total_processed += len(current_paths)

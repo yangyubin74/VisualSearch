@@ -1,7 +1,3 @@
-### ===================================================
-### 00. 공통 설정 및 유틸리티
-### ===================================================
-# 이 파일은 다른 스크립트에서 import하여 사용합니다. (직접 실행 X)
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
@@ -42,7 +38,7 @@ IMAGE_EXTENSIONS=config.IMAGE_EXTENSIONS
 
 # --- 3. 경로 생성 함수 ---
 def create_directories():
-    """필요한 모든 폴더를 생성합니다."""
+    """필요한 모든 폴더를 생성."""
     # 모델 저장 폴더 생성
     (MODEL_SAVE_DIR / "efficientnet").mkdir(parents=True, exist_ok=True)
     (MODEL_SAVE_DIR / "autoencoder").mkdir(parents=True, exist_ok=True)
@@ -56,7 +52,7 @@ def create_directories():
 
 # --- 4. 이미지 경로 로드 함수 ---
 def load_image_paths():
-    """모든 이미지 경로를 스캔하고 딕셔너리로 반환합니다."""
+    """모든 이미지 경로를 스캔하고 딕셔너리로 반환."""
     image_paths = {}
     all_train_paths = []
     

@@ -1,6 +1,3 @@
-### ===================================================
-### 03a. Siamese Network 모델 학습 (과적합 방지 버전)
-### ===================================================
 
 import tensorflow as tf
 from tensorflow.keras.models import Model
@@ -18,7 +15,7 @@ import common_config as cfg
 
 # --- 시각화 함수 ---
 def plot_siamese_history(history, save_path):
-    """Siamese Network의 학습 히스토리를 시각화하여 파일로 저장합니다."""
+    """Siamese Network의 학습 히스토리를 시각화하여 파일로 저장."""
     plt.figure(figsize=(7, 5))
     
     plt.plot(history.history['triplet_loss'], label='Train Loss')
@@ -40,7 +37,7 @@ def plot_siamese_history(history, save_path):
 class SaveBaseNetworkCallback(Callback):
     """
     Epoch 종료 시, 'val_triplet_loss'를 모니터링하여
-    가장 성능이 좋았던 시점의 'base_network' 모델만 저장합니다.
+    가장 성능이 좋았던 시점의 'base_network' 모델만 저장.
     """
     def __init__(self, save_path, monitor='val_triplet_loss', mode='min'):
         super().__init__()
@@ -54,20 +51,20 @@ class SaveBaseNetworkCallback(Callback):
         current = logs.get(self.monitor)
         
         if current is None:
-            print(f"\n⚠ Warning: {self.monitor} not found in logs")
+            print(f"\n Warning: {self.monitor} not found in logs")
             return
 
         improved = (self.mode == 'min' and current < self.best) or \
                    (self.mode == 'max' and current > self.best)
         
         if improved:
-            print(f"\n✓ Epoch {epoch+1}: {self.monitor} improved {self.best:.5f} → {current:.5f}")
+            print(f"\n Epoch {epoch+1}: {self.monitor} improved {self.best:.5f} → {current:.5f}")
             self.best = current
             try:
                 self.model.base_network.save(self.save_path)
                 print(f"  Model saved: {self.save_path}")
             except Exception as e:
-                print(f"  ✗ Save error: {e}")
+                print(f"  Save error: {e}")
         else:
             print(f"\n- Epoch {epoch+1}: {self.monitor} = {current:.5f} (best: {self.best:.5f})")
 
@@ -101,9 +98,9 @@ def load_and_preprocess_siamese(path, img_size=(128, 128), augment=False):
         return tf.zeros([img_size[0], img_size[1], 3], dtype=tf.float32)
 
 
-# --- Base Network 생성 (Dropout & Regularization 추가) ---
+
 def create_base_network(input_shape, embedding_dim):
-    """Embedding을 생성하는 Base Network를 구성합니다."""
+    """Embedding을 생성하는 Base Network를 구성."""
     base = EfficientNetB0(
         weights='imagenet', 
         include_top=False, 
@@ -203,8 +200,6 @@ class TripletLossModel(Model):
     def metrics(self):
         return [self.loss_tracker, self.val_loss_tracker]
 
-
-# --- Triplet Generator (augmentation 추가) ---
 def get_triplet_generator(paths_by_class_map, class_list, img_size=(128, 128), 
                          augment=False, max_attempts=100):
     """
@@ -221,7 +216,7 @@ def get_triplet_generator(paths_by_class_map, class_list, img_size=(128, 128),
             attempts += 1
         
         if attempts >= max_attempts:
-            print("⚠ Warning: Could not find valid anchor class")
+            print("Warning: Could not find valid anchor class")
             continue
             
         anchor_path = random.choice(paths_by_class_map[anchor_class])
@@ -238,7 +233,7 @@ def get_triplet_generator(paths_by_class_map, class_list, img_size=(128, 128),
             attempts += 1
         
         if attempts >= max_attempts:
-            print("⚠ Warning: Could not find valid negative class")
+            print("Warning: Could not find valid negative class")
             continue
             
         negative_path = random.choice(paths_by_class_map[negative_class])
@@ -258,13 +253,13 @@ def map_triplets_to_inputs(anchor, positive, negative):
 # --- 메인 학습 함수 ---
 def main():
     print("\n" + "="*60)
-    print("⚡ Siamese Network (과적합 방지 버전) 학습 시작")
+    print("Siamese Network (과적합 방지 버전) 학습 시작")
     print("="*60)
     
     # Mixed Precision 설정
     policy = mixed_precision.Policy('mixed_float16')
     mixed_precision.set_global_policy(policy)
-    print(f"✓ Mixed Precision 활성화: {policy.name}")
+    print(f"Mixed Precision 활성화: {policy.name}")
     
     # GPU 메모리 최적화
     gpus = tf.config.list_physical_devices('GPU')
@@ -272,7 +267,7 @@ def main():
         try:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"✓ GPU 설정 완료: {len(gpus)}개")
+            print(f"GPU 설정 완료: {len(gpus)}개")
         except RuntimeError as e:
             print(f"GPU 설정 오류: {e}")
     
@@ -280,7 +275,7 @@ def main():
     cfg.create_directories()
     
     IMG_SIZE_SIAMESE = cfg.IMG_SIZE_SIAMESE
-    print(f"⚙️  Siamese Network 이미지 크기: {IMG_SIZE_SIAMESE}")
+    print(f"Siamese Network 이미지 크기: {IMG_SIZE_SIAMESE}")
     
     train_dir = cfg.BASE_IMAGE_DIR / "train"
     test_dir = cfg.BASE_IMAGE_DIR / "test"
@@ -294,7 +289,7 @@ def main():
     total_train = 0
     total_test = 0
     
-    print("\n📁 클래스별 이미지 파일 스캔 중...")
+    print("\n클래스별 이미지 파일 스캔 중...")
     for c in class_list:
         train_paths_by_class[c] = []
         for ext in extensions:
@@ -312,10 +307,10 @@ def main():
         
         print(f"  {c:15} → Train: {train_count:4}, Test: {test_count:4}")
     
-    print(f"\n📊 총 이미지: Train={total_train}, Test={total_test}")
+    print(f"\n총 이미지: Train={total_train}, Test={total_test}")
     
     if total_train == 0 or total_test == 0:
-        print("\n❌ 오류: 학습 또는 테스트 이미지가 없습니다.")
+        print("\n오류: 학습 또는 테스트 이미지가 없습니다.")
         return
     
     # [개선] 데이터셋 생성 - 전체 데이터 사용
@@ -355,13 +350,13 @@ def main():
     validation_dataset_siamese = validation_dataset_siamese.batch(BATCH_SIZE, drop_remainder=True)
     validation_dataset_siamese = validation_dataset_siamese.prefetch(buffer_size=tf.data.AUTOTUNE)
     
-    print("✓ 데이터셋 준비 완료 (Data Augmentation 적용)")
+    print("데이터셋 준비 완료 (Data Augmentation 적용)")
     
     # 모델 생성
     EMBEDDING_DIM = 128
     MARGIN = 0.5
     
-    print(f"\n🔨 모델 생성 중... (Embedding={EMBEDDING_DIM}, Margin={MARGIN})")
+    print(f"\n모델 생성 중... (Embedding={EMBEDDING_DIM}, Margin={MARGIN})")
     base_network = create_base_network((*IMG_SIZE_SIAMESE, 3), EMBEDDING_DIM)
     siamese_model = TripletLossModel(base_network, MARGIN)
     
@@ -371,7 +366,7 @@ def main():
         jit_compile=True
     )
     
-    print("\n📋 Base Network 구조:")
+    print("\nBase Network 구조:")
     trainable_count = sum([1 for layer in base_network.layers if layer.trainable])
     print(f"  총 레이어: {len(base_network.layers)}")
     print(f"  학습 가능: {trainable_count}")
@@ -409,7 +404,7 @@ def main():
     STEPS = (total_train + BATCH_SIZE - 1) // BATCH_SIZE
     VALIDATION_STEPS = (total_test + BATCH_SIZE - 1) // BATCH_SIZE
     
-    print(f"\n🚀 학습 시작:")
+    print(f"\n학습 시작:")
     print(f"  이미지 크기: {IMG_SIZE_SIAMESE}")
     print(f"  배치 크기: {BATCH_SIZE}")
     print(f"  Epochs: {EPOCHS}")
@@ -433,14 +428,14 @@ def main():
     
     # 결과 저장
     print("\n" + "="*60)
-    print("✅ [Siamese Network] 학습 완료")
+    print("[Siamese Network] 학습 완료")
     print("="*60)
     print(f"최적의 Base Network 모델 저장 완료: {base_network_save_path}")
     
     plot_save_path = cfg.MODEL_SAVE_DIR / "siamesenetwork" / "siamese_loss_plot.png"
     plot_siamese_history(history, plot_save_path)
     
-    print("\n모든 작업 완료! 🎉")
+    print("\n모든 작업 완료!")
 
 
 if __name__ == "__main__":

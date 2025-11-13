@@ -1,4 +1,3 @@
-# extract_features_glcm.py (수정됨)
 
 import cv2
 import numpy as np
@@ -26,8 +25,8 @@ DB_PATH =config.DB_PATH_GLCM
 IMAGE_EXTENSIONS=config.IMAGE_EXTENSIONS
 
 def setup_database(db_path):
-    """데이터베이스와 테이블을 설정합니다."""
-    # ... (기존과 동일) ...
+
+    """데이터베이스와 테이블을 설정."""
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -47,16 +46,9 @@ def setup_database(db_path):
     
     conn.commit()
     return conn, cursor
-
-# ============================================================================
-# [제거됨]
-# def extract_glcm(image):
-#     """... (이 함수 전체가 삭제됩니다) ..."""
-# ============================================================================
-
+ 
 def get_category_from_path(image_path, source_dirs):
-    """이미지 경로에서 카테고리를 추출합니다."""
-    # ... (기존과 동일) ...
+    """이미지 경로에서 카테고리를 추출."""
     img_path = Path(image_path).resolve()
     
     for dir_path in source_dirs:
@@ -70,8 +62,7 @@ def get_category_from_path(image_path, source_dirs):
     return "unknown"
 
 def validate_image(image, image_path):
-    """이미지 유효성을 검증합니다."""
-    # ... (기존과 동일) ...
+    """이미지 유효성을 검증."""
     if image is None:
         return False, "파일을 읽을 수 없습니다"
     
@@ -85,7 +76,7 @@ def validate_image(image, image_path):
     return True, None
 
 def process_images():
-    """모든 이미지를 순회하며 특징을 추출하고 DB에 저장합니다."""
+    """모든 이미지를 순회하며 특징을 추출하고 DB에 저장."""
     print(f"데이터베이스 설정 중: {DB_PATH}")
     
     with sqlite3.connect(DB_PATH) as conn:

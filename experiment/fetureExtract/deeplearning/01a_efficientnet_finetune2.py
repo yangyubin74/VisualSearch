@@ -1,8 +1,4 @@
-### =================================================== ###
-### EfficientNet Partial Fine-tuning (개선 버전)           ###
-### (train/test 폴더 분리 구조용)                       ###
-### =================================================== ###
-
+ 
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import EfficientNetB0
@@ -26,7 +22,7 @@ EARLY_STOPPING_PATIENCE = 5
 REDUCE_LR_PATIENCE = 3
 
 # -----------------------------------------------------------
-# 📊 학습 과정 시각화 함수
+# 학습 과정 시각화 함수
 # -----------------------------------------------------------
 def plot_history(history, save_path):
     """학습 히스토리를 시각화합니다 (Loss 및 Accuracy)."""
@@ -58,7 +54,7 @@ def plot_history(history, save_path):
     plt.close()
 
 # -----------------------------------------------------------
-# 🏗️ 모델 생성 함수
+# 모델 생성 함수
 # -----------------------------------------------------------
 def create_model(num_classes, fine_tune_layers=FINE_TUNE_LAYERS):
     """EfficientNet 모델 생성 및 partial fine-tuning 설정"""
@@ -83,7 +79,7 @@ def create_model(num_classes, fine_tune_layers=FINE_TUNE_LAYERS):
     return model, base_model
 
 # -----------------------------------------------------------
-# 📁 데이터 생성기 구성 함수
+# 데이터 생성기 구성 함수
 # -----------------------------------------------------------
 def create_data_generators(train_dir, validation_dir, use_augmentation= True):
     """훈련 및 검증 데이터 생성기를 구성합니다."""
@@ -132,14 +128,14 @@ def create_data_generators(train_dir, validation_dir, use_augmentation= True):
     return train_generator, validation_generator
 
 # -----------------------------------------------------------
-# 📈 데이터셋 정보 출력 함수
+# 데이터셋 정보 출력 함수
 # -----------------------------------------------------------
 def print_dataset_info(train_generator, validation_generator):
-    """데이터셋 정보를 출력합니다."""
+    """데이터셋 정보를 출력."""
     num_classes = len(train_generator.class_indices)
     
     print(f"\n{'='*60}")
-    print(f"📊 데이터셋 정보")
+    print(f"데이터셋 정보")
     print(f"{'='*60}")
     print(f"훈련 이미지 개수: {train_generator.samples}")
     print(f"검증 이미지 개수: {validation_generator.samples}")
@@ -147,7 +143,7 @@ def print_dataset_info(train_generator, validation_generator):
     print(f"클래스 목록: {list(train_generator.class_indices.keys())}")
     
     # 클래스별 샘플 수 출력
-    print(f"\n📦 클래스별 훈련 데이터 분포:")
+    print(f"클래스별 훈련 데이터 분포:")
     for class_name, class_idx in sorted(train_generator.class_indices.items(), key=lambda x: x[1]):
         count = sum(train_generator.classes == class_idx)
         print(f"  - {class_name}: {count}개")
@@ -159,26 +155,26 @@ def print_dataset_info(train_generator, validation_generator):
 # ✅ 데이터 검증 함수
 # -----------------------------------------------------------
 def validate_data(train_dir, validation_dir, train_generator):
-    """데이터 경로 및 최소 요구사항을 검증합니다."""
+    """데이터 경로 및 최소 요구사항을 검증."""
     
     # 디렉토리 존재 확인
     if not train_dir.exists():
-        raise FileNotFoundError(f"❌ 훈련 데이터 경로를 찾을 수 없습니다: {train_dir}")
+        raise FileNotFoundError(f"훈련 데이터 경로를 찾을 수 없습니다: {train_dir}")
     if not validation_dir.exists():
-        raise FileNotFoundError(f"❌ 검증 데이터 경로를 찾을 수 없습니다: {validation_dir}")
+        raise FileNotFoundError(f"검증 데이터 경로를 찾을 수 없습니다: {validation_dir}")
     
     # 최소 샘플 수 검증
     if train_generator.samples < 10:
-        raise ValueError(f"❌ 훈련 데이터가 너무 적습니다: {train_generator.samples}개 (최소 10개 필요)")
+        raise ValueError(f"훈련 데이터가 너무 적습니다: {train_generator.samples}개 (최소 10개 필요)")
     
-    print("✅ 데이터 검증 완료")
+    print("데이터 검증 완료")
 
 # -----------------------------------------------------------
 # 🚀 메인 학습 함수
 # -----------------------------------------------------------
 def main():
     print("\n" + "="*60)
-    print("🚀 [EfficientNet] Partial Fine-tuning 시작")
+    print("[EfficientNet] Partial Fine-tuning 시작")
     print("="*60)
 
     # 1. 경로 생성
@@ -188,7 +184,7 @@ def main():
     train_dir = cfg.BASE_IMAGE_DIR / "train"
     validation_dir = cfg.BASE_IMAGE_DIR / "test"
 
-    print(f"\n📁 데이터 경로:")
+    print(f"  데이터 경로:")
     print(f"  훈련: {train_dir}")
     print(f"  검증: {validation_dir}")
 
@@ -196,7 +192,7 @@ def main():
     train_generator, validation_generator = create_data_generators(
         train_dir, 
         validation_dir,
-        use_augmentation=False  # 필요시 True로 변경
+        use_augmentation=False  
     )
 
     # 4. 데이터 검증
@@ -206,12 +202,12 @@ def main():
     num_classes = print_dataset_info(train_generator, validation_generator)
 
     # 6. 모델 생성
-    print("🏗️ 모델 생성 중...")
+    print("모델 생성 중...")
     model, base_model = create_model(num_classes, FINE_TUNE_LAYERS)
     
     # 7. 모델 정보 출력
     print(f"\n{'='*60}")
-    print("🔧 모델 구성 정보")
+    print("모델 구성 정보")
     print(f"{'='*60}")
     trainable_params = sum([tf.keras.backend.count_params(w) for w in model.trainable_weights])
     total_params = sum([tf.keras.backend.count_params(w) for w in model.weights])
@@ -230,15 +226,6 @@ def main():
 
     # 9. 콜백 정의
     save_path = cfg.MODEL_SAVE_DIR / "efficientnet" / "efficientnet_best.h5"
-    
-    # EarlyStopping
-    # es = EarlyStopping(
-    #     monitor='val_loss',
-    #     mode='min',
-    #     verbose=1,
-    #     patience=EARLY_STOPPING_PATIENCE,
-    #     restore_best_weights=True
-    # )
     es = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
     
     # ModelCheckpoint
@@ -263,7 +250,7 @@ def main():
 
     # 10. 모델 학습
     print("="*60)
-    print("📚 학습 시작")
+    print("학습 시작")
     print("="*60)
     print(f"최대 Epoch: {MAX_EPOCHS}")
     print(f"Batch Size: {BATCH_SIZE}")
@@ -280,7 +267,7 @@ def main():
 
     # 11. 학습 결과 출력
     print("\n" + "="*60)
-    print("✅ [EfficientNet] Partial Fine-tuning 완료")
+    print("[EfficientNet] Partial Fine-tuning 완료")
     print("="*60)
     print(f"최적 모델 저장 위치: {save_path}")
     
@@ -289,7 +276,7 @@ def main():
     best_val_loss = min(history.history['val_loss'])
     best_val_acc = history.history['val_accuracy'][best_epoch - 1]
     
-    print(f"\n📊 최종 성능:")
+    print(f"   최종 성능:")
     print(f"  - Best Epoch: {best_epoch}")
     print(f"  - Best Validation Loss: {best_val_loss:.4f}")
     print(f"  - Best Validation Accuracy: {best_val_acc:.4f}")
@@ -301,10 +288,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # 이 스크립트를 실행하기 전에 common_config.py (cfg) 파일의
-    # BASE_IMAGE_DIR = "/images/experimentimage/model"
-    # IMG_SIZE_EFFICIENTNET = (224, 224)
-    # MODEL_SAVE_DIR = ... (저장할 경로)
-    # 등이 올바르게 설정되어 있는지 확인하세요.
     
     cfg.measure_process_time(main)

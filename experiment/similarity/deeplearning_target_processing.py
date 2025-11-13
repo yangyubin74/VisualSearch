@@ -23,22 +23,7 @@ def preprocess_and_save(
     target_size: int = 512,
     session: Optional[object] = None
 ) -> str:
-    """
-    Target 이미지를 학습 데이터와 동일한 방식으로 전처리하고 저장
-    
-    Args:
-        input_path: 입력 이미지 경로
-        output_path: 출력 이미지 경로
-        target_size: 출력 이미지 크기 (기본값: 512)
-        session: rembg GPU 세션 (옵션)
-    
-    Returns:
-        str: 저장된 이미지 경로
-    
-    Raises:
-        ValueError: 배경 제거 후 이미지가 비어있을 때
-        Exception: 기타 처리 오류
-    """
+     
     try:
         # 출력 디렉토리가 없으면 생성
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -79,7 +64,7 @@ def preprocess_and_save(
         return str(output_path)
         
     except Exception as e:
-        print(f"❌ Error processing {input_path.name}: {e}", file=sys.stderr)
+        print(f"Error processing {input_path.name}: {e}", file=sys.stderr)
         raise
 
 
@@ -93,15 +78,15 @@ def main():
     print("Initializing rembg session (Attempting GPU)...")
     try:
         session = new_session(providers=['CUDAExecutionProvider'])
-        print("✅ GPU session (CUDAExecutionProvider) initialized successfully.")
+        print(" GPU session (CUDAExecutionProvider) initialized successfully.")
     except Exception as e:
-        print(f"🚨 GPU session failed: {e}", file=sys.stderr)
-        print("⚠️  Falling back to CPU... (This may be slower)")
+        print(f"GPU session failed: {e}", file=sys.stderr)
+        print(" Falling back to CPU... (This may be slower)")
         try:
             session = new_session(providers=['CPUExecutionProvider'])
-            print("✅ CPU session initialized.")
+            print(" CPU session initialized.")
         except Exception as cpu_e:
-            print(f"❌ Fatal: Could not initialize CPU session: {cpu_e}", file=sys.stderr)
+            print(f" Fatal: Could not initialize CPU session: {cpu_e}", file=sys.stderr)
             return
     
     print("-" * 50)
@@ -119,7 +104,7 @@ def main():
                 seen_files.add(file)
     
     if not image_files:
-        print(f"⚠️  No images found in {INPUT_BASE_DIR}")
+        print(f" No images found in {INPUT_BASE_DIR}")
         return
 
     print(f"Found {len(image_files)} images to process.\n")
@@ -149,15 +134,15 @@ def main():
             success_count += 1
         except Exception as e:
             error_count += 1
-            tqdm.write(f"⚠️  Skipping {input_file.name}: {str(e)[:60]}")
+            tqdm.write(f" Skipping {input_file.name}: {str(e)[:60]}")
 
     # 최종 통계 출력
     print("\n" + "=" * 50)
     print("Processing Complete!")
-    print(f"  ✅ Success: {success_count}")
-    print(f"  ⏭️  Skipped: {skip_count}")
-    print(f"  ❌ Errors:  {error_count}")
-    print(f"  📊 Total:   {len(image_files)}")
+    print(f"  Success: {success_count}")
+    print(f"  Skipped: {skip_count}")
+    print(f"  Errors:  {error_count}")
+    print(f"  Total:   {len(image_files)}")
     print("=" * 50)
 
 

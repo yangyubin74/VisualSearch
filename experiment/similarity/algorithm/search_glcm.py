@@ -1,10 +1,9 @@
-# search_glcm.py (수정됨)
 
 import cv2
 import numpy as np
 import sqlite3
 import json
-# from skimage.feature import graycomatrix, graycoprops # <-- (제거)
+
 from scipy.spatial.distance import euclidean, cityblock
 from typing import List, Dict, Tuple
 
@@ -20,7 +19,7 @@ from common_utility import extract_glcm,measure_process_time
 # ============================================================================
 DB_PATH = config.DB_PATH_GLCM
 TOP_K = config.TOP_K
-GLCM_LEVELS = config.GLCM_LEVELS # <--- config에서 읽어오도록 통일 (기존 32 하드코딩 대신)
+GLCM_LEVELS = config.GLCM_LEVELS 
 
 RELEVANT_CATEGORY = None
 TARGET_IMAGE_PATH=None
@@ -36,7 +35,7 @@ def calculate_metrics(
     total_relevant_count: int,
     k: int
 ) -> Dict[str, float]:
-    """... (기존과 동일) ..."""
+    
     r = [1 if item['category'] == relevant_category else 0 for item in results]
     
     k_actual = len(r)
@@ -72,14 +71,9 @@ def calculate_metrics(
         'ndcg_at_k': ndcg_at_k
     }
 
-# ============================================================================
-# [제거됨]
-# def extract_glcm(image):
-#     """... (이 함수 전체가 삭제됩니다) ..."""
-# ============================================================================
 
 def get_target_features(image_path):
-    """타겟 이미지의 GLCM 특징을 추출합니다."""
+    """타겟 이미지의 GLCM 특징을 추출."""
     if not os.path.exists(image_path):
         print(f"오류: 타겟 이미지 파일을 찾을 수 없습니다. {image_path}")
         return None
@@ -120,7 +114,7 @@ def load_features_from_db(db_path):
                 feature_vector = np.array(json.loads(feature_str))
                 db_features.append((image_path, category, feature_vector))
             except json.JSONDecodeError:
-                print(f"경고: {image_path}의 특징 벡터(JSON) 파싱 오류. 건너뜁니다.")
+                print(f"경고: {image_path}의 특징 벡터(JSON) 파싱 오류.")
                 
     except sqlite3.Error as e:
         print(f"데이터베이스 조회 오류: {e}")
@@ -138,7 +132,7 @@ def find_similar_images(
     target_image_path: str,
     top_k: int = TOP_K
 ) -> Tuple[List[Dict], List[Dict]]:
-    """... (기존과 동일) ..."""
+    
     distances = []
     
     for image_path, category, db_vec in db_features:
@@ -186,33 +180,33 @@ def print_results(
     print("\n" + "="*100)
     print("GLCM SIMILARITY SEARCH RESULTS")
     print("="*100)
-    print(f"🎯 Target Image: {target_path}")
-    print(f"✅ Relevant Category (Ground Truth): '{relevant_category}'")
+    print(f"Target Image: {target_path}")
+    print(f"Relevant Category (Ground Truth): '{relevant_category}'")
     print("="*100)
     
     # --- Euclidean 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - EUCLIDEAN DISTANCE (L2)")
+    print(f"\nTop {TOP_K} Similar Images - EUCLIDEAN DISTANCE (L2)")
     print("-" * 100)
     for item in euclidean_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
+        print(f"  Distance: {item['distance']:.6f}")
         print()
         
     # --- Manhattan 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - MANHATTAN DISTANCE (L1)")
+    print(f"\n Top {TOP_K} Similar Images - MANHATTAN DISTANCE (L1)")
     print("-" * 100)
     for item in manhattan_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
+        print(f"  Distance: {item['distance']:.6f}")
         print()
         
     # --- 품질 지표(Metrics) 출력 ---
     print("\n" + "="*100)
-    print(f"📈 PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
+    print(f"PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
     print("="*100)
     
     print(f"| {'Metric':<16} | {'Euclidean (L2)':<15} | {'Manhattan (L1)':<15} | {'Description'} |")
@@ -244,17 +238,17 @@ def print_results(
 # 메인 실행
 # ============================================================================
 def main():
-    print("\n🚀 Starting GLCM Similarity Search...")
-    print(f"📁 Target Image: {TARGET_IMAGE_PATH}")
-    print(f"💾 Database: {DB_PATH}")
-    print(f"🎯 Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
+    print("\nStarting GLCM Similarity Search...")
+    print(f"Target Image: {TARGET_IMAGE_PATH}")
+    print(f"Database: {DB_PATH}")
+    print(f"Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
 
     # 1. 타겟 이미지 특징 추출
     print("\n[Step 1] Extracting GLCM features from target image...")
     target_features = get_target_features(TARGET_IMAGE_PATH)
     if target_features is None:
         return
-    print(f"✅ Feature vector extracted: shape={target_features.shape}")
+    print(f"Feature vector extracted: shape={target_features.shape}")
 
     # 2. 데이터베이스에서 모든 특징 로드
     print("\n[Step 2] Loading features from database...")
@@ -262,7 +256,7 @@ def main():
     if not db_features:
         print("데이터베이스에 특징 벡터가 없습니다. 프로그램을 종료합니다.")
         return
-    print(f"✅ Loaded {len(db_features)} images from database")
+    print(f"Loaded {len(db_features)} images from database")
 
     print(f"\n[Step 3] 총 {len(db_features)}개의 이미지와 유사도 비교 시작...")
     
@@ -273,7 +267,7 @@ def main():
         TARGET_IMAGE_PATH,
         top_k=TOP_K
     )
-    print(f"✅ Found top {TOP_K} similar images (Manhattan & Euclidean)")
+    print(f"Found top {TOP_K} similar images (Manhattan & Euclidean)")
 
     # 4. 품질 지표 계산
     print("\n[Step 4] Calculating performance metrics...")
@@ -283,7 +277,7 @@ def main():
         
     euclidean_metrics = calculate_metrics(top_k_euclidean, RELEVANT_CATEGORY, total_relevant, TOP_K)
     manhattan_metrics = calculate_metrics(top_k_manhattan, RELEVANT_CATEGORY, total_relevant, TOP_K)
-    print(f"✅ Metrics calculated")
+    print(f"Metrics calculated")
 
     # 5. 결과 출력
     print_results(
@@ -305,4 +299,4 @@ if __name__ == "__main__":
         
       measure_process_time(main)
 
-      print("\n🎉 Search and Evaluation completed successfully!")
+      print("\n Search and Evaluation completed successfully!")

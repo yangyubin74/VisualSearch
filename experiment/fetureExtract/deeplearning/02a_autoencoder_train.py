@@ -1,6 +1,3 @@
-### ===================================================
-### 02a. Autoencoder 모델 학습 (콜백 및 검증 추가)
-### ===================================================
 
 import tensorflow as tf
 from tensorflow.keras.models import Model
@@ -10,18 +7,12 @@ from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt 
 import numpy as np
 
-# [추가] pathlib의 Path 객체 임포트 (rglob을 사용하기 위함)
 from pathlib import Path
 
 import common_config as cfg
 
-# ... (plot_ae_history, load_and_preprocess_ae, build_autoencoder 함수는 동일) ...
-
-# -----------------------------------------------------------
-# [수정] 📊 오토인코더 학습 과정 시각화 (파일 저장용)
-# -----------------------------------------------------------
 def plot_ae_history(history, save_path):
-    """Autoencoder의 학습 히스토리를 시각화하여 파일로 저장합니다."""
+    """Autoencoder의 학습 히스토리를 시각화하여 파일로 저장."""
     plt.figure(figsize=(7, 5))
     plt.plot(history.history['loss'], label='Train Loss')
     plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -35,16 +26,17 @@ def plot_ae_history(history, save_path):
     print(f"학습 그래프 저장 완료: {save_path}")
     plt.close()
 
-# ... (load_and_preprocess_ae, build_autoencoder 함수는 동일) ...
+
 
 def load_and_preprocess_ae(path):
     """AE 학습용 데이터 로더"""
     img = tf.io.read_file(path)
-    # [수정] expand_animations=False 추가 (GIF 등 처리)
+    # expand_animations=False 추가 (GIF 등 처리)
     img = tf.io.decode_image(img, channels=3, expand_animations=False) 
     img = tf.image.resize(img, [cfg.IMG_SIZE_AE[0], cfg.IMG_SIZE_AE[1]])
     img = tf.cast(img, tf.float32) / 255.0 # 0~1 정규화
     return img, img # Autoencoder는 입력과 타겟(정답)이 동일
+
 def build_autoencoder(input_shape, latent_dim):
     """Autoencoder 모델 정의"""
     IMG_H, IMG_W, _ = input_shape
@@ -100,7 +92,7 @@ def main():
     print(f"Train (AE) 경로 스캔: {train_dir}")
     print(f"Test (AE) 경로 스캔: {validation_dir}")
 
-    # [수정] cfg.load_image_paths() 대신 rglob으로 파일 목록 직접 스캔
+    # cfg.load_image_paths() 대신 rglob으로 파일 목록 직접 스캔
     # 지원할 이미지 확장자 (필요시 .png 등 추가)
     extensions = ["*.jpg", "*.jpeg", "*.png"]
     
@@ -113,7 +105,7 @@ def main():
     for ext in extensions:
         all_test_paths.extend(validation_dir.rglob(f'**/{ext}'))
 
-    # [수정] pathlib 객체를 문자열로 변환 (tf.data.Dataset은 문자열을 선호)
+    # pathlib 객체를 문자열로 변환 (tf.data.Dataset은 문자열을 선호)
     all_train_paths = [str(p) for p in all_train_paths]
     all_test_paths = [str(p) for p in all_test_paths]
 

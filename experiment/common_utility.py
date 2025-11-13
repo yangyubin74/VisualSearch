@@ -67,17 +67,7 @@ def extract_color_moment_rgb(image):
 
 #=====================GLCM 특징점 추출과 이미지 검색 시 공동으로 사용[S] ==================
 def extract_glcm(image, glcm_levels):
-    """
-    GLCM(Gray-Level Co-occurrence Matrix) 특징을 추출합니다.
-    이 함수는 특징 추출 및 검색 스크립트에서 공유됩니다.
     
-    Args:
-        image (np.ndarray): 입력 이미지 (OpenCV BGR 포맷)
-        glcm_levels (int): GLCM 계산에 사용할 레벨 수 (예: 32)
-        
-    Returns:
-        np.ndarray: 1D 특징 벡터
-    """
     # 그레이스케일 변환
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     

@@ -1,5 +1,3 @@
-# extract_features_humoments.py (수정됨)
-
 import cv2
 import numpy as np
 import sqlite3
@@ -25,7 +23,7 @@ BATCH_SIZE = 100
 
 @contextmanager
 def get_db_connection(db_path):
-    """... (기존과 동일) ..."""
+    
     conn = sqlite3.connect(db_path)
     try:
         yield conn
@@ -38,7 +36,7 @@ def get_db_connection(db_path):
         conn.close()
 
 def setup_database(db_path):
-    """... (기존과 동일) ..."""
+    
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -105,25 +103,22 @@ def process_images(skip_existing=True):
                     error_count += 1
                     continue
                 
-                # [수정됨] 공용 함수 호출
                 features = extract_hu_moments(image) 
                 features_json = json.dumps(features.tolist())
                 
-                # [!] 중요: 버그 수정
-                # category를 먼저 계산해야 합니다.
+                # category를 먼저 계산.
                 category = get_category_from_path(image_path, SOURCE_DIRS)
                 
-                # batch_data에 (path, category, feature) 튜플을 저장해야 합니다.
+                # batch_data에 (path, category, feature) 튜플을 저장.
                 batch_data.append((image_path, category, features_json))
                 
                 # 배치가 가득 찼으면 DB에 저장
                 if len(batch_data) >= BATCH_SIZE:
-                    # [!] 중요: 버그 수정
-                    # executemany는 쿼리와 튜플 리스트만 받습니다.
+                   
                     cursor.executemany("""
                     INSERT OR REPLACE INTO features (image_path, category, feature_vector) 
                     VALUES (?, ?, ?)
-                    """, batch_data) # <--- 수정됨
+                    """, batch_data) 
                     
                     conn.commit()
                     success_count += len(batch_data)
@@ -135,11 +130,10 @@ def process_images(skip_existing=True):
         
         # 남은 데이터 저장
         if batch_data:
-            # [!] 중요: 버그 수정
             cursor.executemany("""
             INSERT OR REPLACE INTO features (image_path, category, feature_vector) 
             VALUES (?, ?, ?)
-            """, batch_data) # <--- 수정됨
+            """, batch_data) 
             
             conn.commit()
             success_count += len(batch_data)

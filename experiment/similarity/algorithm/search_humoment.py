@@ -1,4 +1,3 @@
-# search_humoment.py (수정됨)
 
 import cv2
 import numpy as np
@@ -36,7 +35,7 @@ def calculate_metrics(
     total_relevant_count: int,
     k: int
 ) -> Dict[str, float]:
-    """... (기존과 동일) ..."""
+    
     # 1. Relevance List (r) 생성 (정답=1, 오답=0)
     r = [1 if item['category'] == relevant_category else 0 for item in results]
     
@@ -44,7 +43,7 @@ def calculate_metrics(
     if k_actual == 0:
         return {'precision_at_k': 0.0, 'recall_at_k': 0.0, 'map_at_k': 0.0, 'ndcg_at_k': 0.0}
 
-    # ... (이하 동일) ...
+    
     precision_at_k = np.sum(r) / k_actual
     recall_at_k = np.sum(r) / total_relevant_count if total_relevant_count > 0 else 0.0
     
@@ -69,10 +68,9 @@ def calculate_metrics(
         'ndcg_at_k': ndcg_at_k
     }
 
-# --- 검색 로직 ---
 
 def load_all_features_from_db(db_path):
-    """... (기존과 동일) ..."""
+    
     if not os.path.exists(db_path):
         print(f"오류: 데이터베이스 파일을 찾을 수 없습니다: {db_path}")
         return []
@@ -122,7 +120,7 @@ def search_similar_images(
     else:
         # 알 수 없는 차원 - 균등 가중치
         weights = np.ones(feature_dim)
-        print(f"⚠️  경고: 예상치 못한 특징 차원 ({feature_dim}). 균등 가중치 사용.")
+        print(f"경고: 예상치 못한 특징 차원 ({feature_dim}). 균등 가중치 사용.")
     
     print(f"\n--- {distance_metric.capitalize()} 거리 계산 시작 (가중치 적용, 차원: {feature_dim}) ---")
     distances = []
@@ -168,38 +166,37 @@ def print_results(
     manhattan_metrics: Dict,
     relevant_category: str
 ):
-    """... (기존과 동일) ..."""
+    
     print("\n" + "="*100)
     print("HU MOMENT SIMILARITY SEARCH RESULTS")
     print("="*100)
-    print(f"🎯 Target Image: {target_path}")
-    print(f"✅ Relevant Category (Ground Truth): '{relevant_category}'")
+    print(f"Target Image: {target_path}")
+    print(f"Relevant Category (Ground Truth): '{relevant_category}'")
     print("="*100)
     
-    # ... (이하 동일) ...
-    # --- Euclidean 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - EUCLIDEAN DISTANCE (L2)")
+    
+    print(f"\nTop {TOP_K} Similar Images - EUCLIDEAN DISTANCE (L2)")
     print("-" * 100)
     for item in euclidean_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
+        print(f"  Distance: {item['distance']:.6f}")
         print()
         
     # --- Manhattan 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - MANHATTAN DISTANCE (L1)")
+    print(f"\nTop {TOP_K} Similar Images - MANHATTAN DISTANCE (L1)")
     print("-" * 100)
     for item in manhattan_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
+        print(f"  Distance: {item['distance']:.6f}")
         print()
         
     # --- 품질 지표(Metrics) 출력 ---
     print("\n" + "="*100)
-    print(f"📈 PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
+    print(f"PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
     print("="*100)
     
     print(f"| {'Metric':<16} | {'Euclidean (L2)':<15} | {'Manhattan (L1)':<15} | {'Description'} |")
@@ -233,7 +230,7 @@ def main():
     print("--- Hu Moment 유사도 검색 시작 ---")
     print(f"타겟 이미지: {TARGET_IMAGE_PATH}")
     print(f"데이터베이스: {DB_PATH}")
-    print(f"🎯 Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
+    print(f"Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
     print("-" * 30)
 
     # 1. 타겟 이미지 유효성 검사 및 로드
@@ -249,7 +246,7 @@ def main():
     # 2. 타겟 이미지 특징 추출 (공용 함수 사용)
     print("\n[Step 1] 타겟 이미지 특징 추출 중...")
     target_features = extract_hu_moments(target_image) # <--- [수정됨] 공용 함수 호출
-    print("✅ 타겟 이미지 특징 추출 완료.")
+    print("타겟 이미지 특징 추출 완료.")
 
     # 3. 데이터베이스에서 모든 특징 로드
     print("\n[Step 2] 데이터베이스에서 모든 특징 로드 중...")
@@ -275,7 +272,7 @@ def main():
         top_k=TOP_K, 
         distance_metric='manhattan'
     )
-    print("✅ 유사도 검색 완료.")
+    print("유사도 검색 완료.")
 
     # 6. 품질 지표 계산
     print("\n[Step 4] Calculating performance metrics...")
@@ -285,7 +282,7 @@ def main():
         
     euclidean_metrics = calculate_metrics(euclidean_results, RELEVANT_CATEGORY, total_relevant, TOP_K)
     manhattan_metrics = calculate_metrics(manhattan_results, RELEVANT_CATEGORY, total_relevant, TOP_K)
-    print(f"✅ Metrics calculated")
+    print(f"Metrics calculated")
 
     # 7. 결과 출력
     print_results(
@@ -298,7 +295,7 @@ def main():
     )
 
         
-    print("\n🎉 Search and Evaluation completed successfully!")
+    print("\nSearch and Evaluation completed successfully!")
 # --- 메인 실행 ---
 
 if __name__ == "__main__":

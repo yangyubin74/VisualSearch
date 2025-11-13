@@ -1,6 +1,5 @@
 """
 RGB 색공간 기반 Color Moment 특징 추출 및 DB 저장
-HSV 변환의 문제를 피하기 위해 RGB를 직접 사용합니다.
 """
 import cv2
 import numpy as np
@@ -26,8 +25,7 @@ DB_PATH =config.DB_PATH_COLORMOMENT
 
 
 def setup_database(db_path):
-    """데이터베이스와 테이블을 설정합니다."""
-    # ... (기존 코드와 동일) ...
+    """데이터베이스와 테이블을 설정."""
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
  
     try:
@@ -54,8 +52,7 @@ def setup_database(db_path):
 
 
 def get_category_from_path(image_path, source_dirs):
-    """이미지 경로에서 카테고리를 추출합니다."""
-    # ... (기존 코드와 동일) ...
+    """이미지 경로에서 카테고리를 추출."""
     normalized_path = os.path.normpath(os.path.abspath(image_path))
     sorted_dirs = sorted(source_dirs, key=lambda x: len(x), reverse=True)
  
@@ -72,11 +69,10 @@ def get_category_from_path(image_path, source_dirs):
 
 
 def process_images():
-    """모든 이미지를 순회하며 특징을 추출하고 DB에 저장합니다."""
+    """모든 이미지를 순회하며 특징을 추출하고 DB에 저장."""
     print(f"데이터베이스 설정 중: {DB_PATH}")
     conn, cursor = setup_database(DB_PATH)
     
-    # ... (이미지 경로 수집 부분은 동일) ...
     print("이미지 파일 목록 수집 중...")
     image_paths = []
     for directory in SOURCE_DIRS:
@@ -105,7 +101,6 @@ def process_images():
                 failed_count += 1
                 continue
             
-            # [수정] 공통 모듈의 함수 사용
             features = extract_color_moment_rgb(image) 
             features_json = json.dumps(features.tolist())
             

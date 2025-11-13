@@ -1,9 +1,4 @@
-"""
-Color Moment 유사도 검색 실행 스크립트
-DB 생성 시 사용된 RGB Color Moment 특징을 동일하게 사용하여 유사 이미지를 검색합니다.
-+
-검색 품질 지표(mAP@K, NDCG@K, Precision@K, Recall@K)를 계산합니다.
-"""
+ 
 
 import sqlite3
 import numpy as np
@@ -42,9 +37,9 @@ def calculate_metrics(
     k: int
 ) -> Dict[str, float]:
     """
-    검색 결과(Top-K)를 기반으로 품질 지표를 계산합니다.
+    검색 결과(Top-K)를 기반으로 품질 지표를 계산.
     """
-    # ... (기존 코드와 동일) ...
+    
     r = [1 if item['category'] == relevant_category else 0 for item in results]
     k_actual = len(r)
     if k_actual == 0:
@@ -76,8 +71,8 @@ def calculate_metrics(
 # ============================================================================
 def get_target_feature(image_path: str) -> np.ndarray:
     """
-    타겟 이미지 파일을 읽어 공통 Color Moment 특징을 추출합니다.
-    DB 생성시 사용된 'extract_color_moment_rgb'와 동일한 함수를 사용합니다.
+    타겟 이미지 파일을 읽어 공통 Color Moment 특징을 추출.
+    DB 생성시 사용된 'extract_color_moment_rgb'와 동일한 함수를 사용.
     """
     image = cv2.imread(image_path)
     if image is None:
@@ -85,8 +80,6 @@ def get_target_feature(image_path: str) -> np.ndarray:
     
     # 공통 모듈의 함수를 사용하여 특징 추출
     return extract_color_moment_rgb(image)
-
-# <--- [제거] 기존의 HSV 기반 extract_color_moment 함수 전체 삭제 ---
 
 
 # ============================================================================
@@ -188,12 +181,12 @@ def print_results(
     print("\n" + "="*100)
     print("COLOR MOMENT SIMILARITY SEARCH RESULTS")
     print("="*100)
-    print(f"🎯 Target Image: {target_path}")
-    print(f"✅ Relevant Category (Ground Truth): '{relevant_category}'")
+    print(f"Target Image: {target_path}")
+    print(f"Relevant Category (Ground Truth): '{relevant_category}'")
     print("="*100)
  
     # --- Euclidean 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - EUCLIDEAN DISTANCE")
+    print(f"\nTop {TOP_K} Similar Images - EUCLIDEAN DISTANCE")
     print("-" * 100)
     for item in euclidean_results:
         print(f"Rank {item['rank']}:")
@@ -203,7 +196,7 @@ def print_results(
         print()
  
     # --- Manhattan 결과 ---
-    print(f"\n📊 Top {TOP_K} Similar Images - MANHATTAN DISTANCE")
+    print(f"\nTop {TOP_K} Similar Images - MANHATTAN DISTANCE")
     print("-" * 100)
     for item in manhattan_results:
         print(f"Rank {item['rank']}:")
@@ -214,7 +207,7 @@ def print_results(
  
     # --- 품질 지표(Metrics) 출력 ---
     print("\n" + "="*100)
-    print(f"📈 PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
+    print(f"PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
     print("="*100)
  
     print(f"| {'Metric':<16} | {'Euclidean':<15} | {'Manhattan':<15} | {'Description'} |")
@@ -249,20 +242,20 @@ def print_results(
 def main():
     """유사도 검색 및 품질 지표 계산 메인 함수"""
     
-    print("\n🚀 Starting Color Moment Similarity Search...")
-    print(f"📁 Target Image: {TARGET_IMAGE_PATH}")
-    print(f"💾 Database: {DB_PATH}")
-    print(f"🎯 Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
+    print("\nStarting Color Moment Similarity Search...")
+    print(f"Target Image: {TARGET_IMAGE_PATH}")
+    print(f"Database: {DB_PATH}")
+    print(f"Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
     
     # 1. 타겟 이미지 특징 추출
     print("\n[Step 1] Extracting Color Moment features from target image...")
     target_feature = get_target_feature(TARGET_IMAGE_PATH) # <--- [수정] 새 래퍼 함수 사용
-    print(f"✅ Feature vector extracted: shape={target_feature.shape}")
+    print(f"Feature vector extracted: shape={target_feature.shape}")
     
     # 2. DB에서 특징 벡터 로드
     print("\n[Step 2] Loading features from database...")
     db_features = load_features_from_db(DB_PATH)
-    print(f"✅ Loaded {len(db_features)} images from database")
+    print(f"Loaded {len(db_features)} images from database")
     
     # 3. Euclidean 거리로 검색
     print("\n[Step 3] Searching with Euclidean distance...")
@@ -272,7 +265,7 @@ def main():
         metric='euclidean', 
         top_k=TOP_K
     )
-    print(f"✅ Found top {TOP_K} similar images (Euclidean)")
+    print(f"Found top {TOP_K} similar images (Euclidean)")
     
     # 4. Manhattan 거리로 검색
     print("\n[Step 4] Searching with Manhattan distance...")
@@ -282,7 +275,7 @@ def main():
         metric='manhattan', 
         top_k=TOP_K
     )
-    print(f"✅ Found top {TOP_K} similar images (Manhattan)")
+    print(f"Found top {TOP_K} similar images (Manhattan)")
     
     # 5. 품질 지표 계산
     print("\n[Step 5] Calculating performance metrics...")
@@ -292,7 +285,7 @@ def main():
         
     euclidean_metrics = calculate_metrics(euclidean_results, RELEVANT_CATEGORY, total_relevant, TOP_K)
     manhattan_metrics = calculate_metrics(manhattan_results, RELEVANT_CATEGORY, total_relevant, TOP_K)
-    print(f"✅ Metrics calculated")
+    print(f"Metrics calculated")
 
     # 6. 결과 및 지표 출력
     print_results(
@@ -314,6 +307,7 @@ def main():
 
 if __name__ == "__main__":
     try:
+        
         if len(sys.argv) == 3:
             RELEVANT_CATEGORY = sys.argv[1]
             target_image_name= sys.argv[2]
@@ -322,9 +316,9 @@ if __name__ == "__main__":
             print("\n========> 첫번째 파라메터는 카테고리, 두번째 카테고리는 확장자 제외한 이미지 이름을 등록하세요.")
         
         results_data=measure_process_time(main)
-        #results_data = main()
-        print("\n🎉 Search and Evaluation completed successfully!")
+        
+        print("\nSearch and Evaluation completed successfully!")
     except Exception as e:
-        print(f"\n❌ Error occurred: {e}")
+        print(f"\nError occurred: {e}")
         import traceback
         traceback.print_exc()

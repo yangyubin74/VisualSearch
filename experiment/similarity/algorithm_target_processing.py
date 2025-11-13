@@ -21,16 +21,13 @@ def preprocess_image_for_algorithm(
     output_path: Path, 
     session
 ):
-    """
-    (preprocess_algorithm.py에서 가져온 표준 함수)
-    단일 이미지를 로드, 배경 제거, 타이트하게 크롭(Crop) 후 PNG로 저장합니다.
-    """
+     
     try:
         # 1. 이미지 로드 및 표준화
         image = Image.open(input_path)
         if image.format == "GIF":
             image.seek(0)
-        # rembg는 RGB 입력을 권장
+        
         image_rgb = image.convert("RGB") 
 
         # 2. 배경 제거 (전달받은 GPU/CPU 세션 사용)
@@ -60,19 +57,19 @@ def main():
     print(f"Output directory: {OUTPUT_BASE_DIR}")
     print("-" * 30)
 
-    # --- 💥 GPU 세션 생성 (실패 시 CPU로 폴백) ---
+    # --- GPU 세션 생성 (실패 시 CPU로 폴백) ---
     print("Initializing rembg session (Attempting GPU)...")
     try:
         # providers에 'CUDAExecutionProvider'를 명시하여 GPU 시도
         session = new_session(providers=['CUDAExecutionProvider'])
-        print("✅ GPU session (CUDAExecutionProvider) initialized successfully.")
+        print(" GPU session (CUDAExecutionProvider) initialized successfully.")
     except Exception as e:
-        print(f"--- 🚨 GPU session failed! Error: {e} ---", file=sys.stderr)
+        print(f"--- GPU session failed! Error: {e} ---", file=sys.stderr)
         print("Falling back to CPU... (This may be very slow)")
         try:
             # GPU 실패 시 CPU로 폴백
             session = new_session(providers=['CPUExecutionProvider'])
-            print("⚠️ CPU session initialized.")
+            print(" CPU session initialized.")
         except Exception as cpu_e:
             print(f"Fatal: Could not initialize CPU session: {cpu_e}", file=sys.stderr)
             return

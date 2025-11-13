@@ -69,7 +69,7 @@ def validate_features(features, expected_count, class_name, split_name):
         issues.append(f"제로 벡터 {zero_vectors}개 발견")
     
     if issues:
-        print(f"  ⚠️  검증 경고 ({class_name}/{split_name}):")
+        print(f" 검증 경고 ({class_name}/{split_name}):")
         for issue in issues:
             print(f"     - {issue}")
         return False
@@ -89,14 +89,14 @@ def main():
     # 2. 파인튜닝된 EfficientNet 모델 로드
     model_path = cfg.MODEL_SAVE_DIR / "efficientnet" / "efficientnet_best.h5"
     if not model_path.exists():
-        print(f"\n❌ 오류: 파인튜닝된 모델이 존재하지 않습니다")
+        print(f"\n 오류: 파인튜닝된 모델이 존재하지 않습니다")
         print(f"   경로: {model_path}")
         print(f"   먼저 efficientnet_best.py를 실행하세요.")
         return
     
-    print(f"\n📂 모델 로드 중...")
+    print(f"\n 모델 로드 중...")
     full_model = load_model(model_path)
-    print(f"   ✓ 로드 완료: {model_path.name}")
+    print(f"   로드 완료: {model_path.name}")
     
     # 3. 특징 추출용 모델 구성 (마지막 Dense 레이어 제거)
     feature_model = Model(
@@ -104,7 +104,7 @@ def main():
         outputs=full_model.layers[-2].output
     )
     feature_dim = feature_model.output.shape[-1]
-    print(f"   ✓ 특징 벡터 차원: {feature_dim}")
+    print(f"  특징 벡터 차원: {feature_dim}")
     
     # 4. 특징 추출 및 저장
     total_stats = {
@@ -117,12 +117,12 @@ def main():
     for c in cfg.SPLITS:
         for s in cfg.CLASSES:
             print(f"\n{'─'*60}")
-            print(f"📊 처리 중: {c} / {s}")
+            print(f"처리 중: {c} / {s}")
             print(f"{'─'*60}")
             
             current_paths = image_paths[c][s]
             if not current_paths:
-                print(f"⚠️  건너뜀: 이미지가 없습니다")
+                print(f"건너뜀: 이미지가 없습니다")
                 continue
             
             print(f"   이미지 수: {len(current_paths)}")
@@ -140,7 +140,7 @@ def main():
             
             # 실패한 이미지 정보 출력
             if failed_indices:
-                print(f"\n   ⚠️  {len(failed_indices)}개 이미지 처리 실패:")
+                print(f"\n   {len(failed_indices)}개 이미지 처리 실패:")
                 for idx in failed_indices[:5]:  # 최대 5개만 표시
                     print(f"      - {current_paths[idx]}")
                 if len(failed_indices) > 5:
@@ -150,21 +150,21 @@ def main():
             is_valid = validate_features(features, len(current_paths), c, s)
             if is_valid:
                 total_stats['validation_passed'] += 1
-                print(f"   ✓ 검증 통과")
+                print(f"   검증 통과")
             else:
                 total_stats['validation_failed'] += 1
             
             # 저장
             save_path = cfg.FEATURE_SAVE_DIR / "efficientnet" / f"{c}_{s}_features.npy"
             np.save(save_path, features)
-            print(f"   ✓ 저장 완료: {save_path.name}")
-            print(f"   ✓ 형태: {features.shape}, 타입: {features.dtype}")
+            print(f"   저장 완료: {save_path.name}")
+            print(f"   형태: {features.shape}, 타입: {features.dtype}")
 
             # .npy 특징 벡터 저장
             save_path = cfg.FEATURE_SAVE_DIR / "efficientnet" / f"{c}_{s}_features.npy"
             np.save(save_path, features)
-            print(f"   ✓ 특징 벡터 저장 완료: {save_path.name}")
-            print(f"   ✓ 형태: {features.shape}, 타입: {features.dtype}")
+            print(f"   특징 벡터 저장 완료: {save_path.name}")
+            print(f"   형태: {features.shape}, 타입: {features.dtype}")
 
               
           
@@ -174,9 +174,9 @@ def main():
             try:
                 with open(filename_save_path, 'w', encoding='utf-8') as f:
                     json.dump(current_paths, f, ensure_ascii=False, indent=4)
-                print(f"   ✓ 파일명 리스트 저장 완료: {filename_save_path.name}")
+                print(f"   파일명 리스트 저장 완료: {filename_save_path.name}")
             except Exception as e:
-                print(f"   ❌ 파일명 리스트 저장 실패: {e}")
+                print(f"   파일명 리스트 저장 실패: {e}")
           
           
     
@@ -189,7 +189,7 @@ def main():
           f"({100*total_stats['failed']/max(total_stats['processed'],1):.2f}%)")
     print(f"   검증 통과:          {total_stats['validation_passed']}개 세트")
     print(f"   검증 실패:          {total_stats['validation_failed']}개 세트")
-    print(f"\n✅ 모든 특징 추출 완료!\n")
+    print(f"\n 모든 특징 추출 완료!\n")
 
 
 if __name__ == "__main__":
