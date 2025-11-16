@@ -29,7 +29,7 @@ TOTAL_RELEVANT_COUNT_MAP = config.TOTAL_RELEVANT_COUNT_MAP
 # --- 1. [수정] 특징 추출 모델(인코더) 로드 ---
 def load_encoder_model():
     
-    model_path = Path(config.MODEL_SAVE_DIR) / "autoencoder" / "encoder_model.h5" 
+    model_path = Path(config.MODEL_SAVE_DIR) / "autoencoder"/config.SEED_DIR / "encoder_model.h5" 
     
     if not model_path.exists():
         print(f" 오류: 학습된 인코더 모델이 존재하지 않습니다: {model_path}")
@@ -55,7 +55,7 @@ def load_encoder_model():
 def load_search_database(split='train'):
     """전체 'train' 스플릿의 특징 벡터와 파일명 리스트를 로드합니다."""
     
-    feature_dir = Path(config.FEATURE_SAVE_DIR) / "autoencoder"
+    feature_dir = Path(config.FEATURE_SAVE_DIR) / "autoencoder"/ config.SEED_DIR
     
     all_db_features = []
     all_db_filenames = []
@@ -279,7 +279,7 @@ def main():
     
     print("\n Starting Autoencoder Similarity Search...") 
     print(f"  Target Image: {TARGET_IMAGE_PATH}")
-    print(f"  Database: {Path(config.FEATURE_SAVE_DIR) / 'autoencoder'}") 
+    print(f"  Database: {Path(config.FEATURE_SAVE_DIR) / 'autoencoder' / config.SEED_DIR}") 
     print(f"  Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
     
     # 1. 특징 추출 모델(인코더) 로드

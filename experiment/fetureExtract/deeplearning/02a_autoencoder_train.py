@@ -38,7 +38,10 @@ def load_and_preprocess_ae(path):
     return img, img # Autoencoder는 입력과 타겟(정답)이 동일
 
 def build_autoencoder(input_shape, latent_dim):
-    """Autoencoder 모델 정의"""
+    """
+    Autoencoder 모델 정의
+    [중요] TF_DETERMINISTIC_OPS=1과 호환되도록 UpSampling2D 제거
+    """
     IMG_H, IMG_W, _ = input_shape
     
     # Encoder
@@ -48,35 +51,31 @@ def build_autoencoder(input_shape, latent_dim):
     x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Conv2D(128, (3, 3), activation='relu', padding='same')(x)
-    x = MaxPooling2D((2, 2), padding='same')(x) # (입력 128x128 기준 -> 16x16x128)
+    x = MaxPooling2D((2, 2), padding='same')(x)
     
-    # 잠재 벡터(Latent Vector)로 압축
+    # 잠재 벡터로 압축
     shape_before_flatten = tf.keras.backend.int_shape(x)[1:]
     x_flat = Flatten()(x)
-    # 'latent_vector' 이름은 나중에 Encoder 모델을 추출할 때 사용됩니다.
     encoded = Dense(latent_dim, activation='relu', name='latent_vector')(x_flat)
     
     # Decoder
-    # 잠재 벡터를 다시 2D 특징 맵 형태로 복원
     x = Dense(np.prod(shape_before_flatten), activation='relu')(encoded)
     x = Reshape(shape_before_flatten)(x)
     
-    # Encoder의 역순으로 이미지 복원 (Conv2DTranspose + UpSampling2D)
-    x = Conv2DTranspose(128, (3, 3), activation='relu', padding='same')(x)
-    x = UpSampling2D((2, 2))(x)
-    x = Conv2DTranspose(64, (3, 3), activation='relu', padding='same')(x)
-    x = UpSampling2D((2, 2))(x)
-    x = Conv2DTranspose(32, (3, 3), activation='relu', padding='same')(x)
-    x = UpSampling2D((2, 2))(x)
+    # [수정] Conv2DTranspose의 strides로 업샘플링 (Deterministic 호환)
+    # UpSampling2D 대신 strides=(2,2) 사용
+    x = Conv2DTranspose(128, (3, 3), strides=(2, 2), 
+                       activation='relu', padding='same')(x)
+    x = Conv2DTranspose(64, (3, 3), strides=(2, 2), 
+                       activation='relu', padding='same')(x)
+    x = Conv2DTranspose(32, (3, 3), strides=(2, 2), 
+                       activation='relu', padding='same')(x)
     
-    # 최종 원본 이미지 채널(3)과 크기로 복원
-    # 픽셀 값 0~1 복원을 위해 'sigmoid' 활성화 함수 사용
-    decoded = Conv2DTranspose(3, (3, 3), activation='sigmoid', padding='same')(x)
+    # 최종 출력
+    decoded = Conv2DTranspose(3, (3, 3), activation='sigmoid', 
+                             padding='same')(x)
     
-    # 전체 Autoencoder 모델
     autoencoder = Model(input_img_ae, decoded)
-    
-    # autoencoder 모델만 반환 (Encoder는 학습 후 추출)
     return autoencoder
 
 def main():
@@ -87,33 +86,33 @@ def main():
     
     # EfficientNet과 동일하게 경로 정의
     train_dir = cfg.BASE_IMAGE_DIR / "train"
-    validation_dir = cfg.BASE_IMAGE_DIR / "test"
+    validation_dir = cfg.BASE_IMAGE_DIR / "validation"
 
-    print(f"Train (AE) 경로 스캔: {train_dir}")
-    print(f"Test (AE) 경로 스캔: {validation_dir}")
+    print(f"  데이터 경로:")
+    print(f"  훈련: {train_dir}")
+    print(f"  검증: {validation_dir}")
 
-    # cfg.load_image_paths() 대신 rglob으로 파일 목록 직접 스캔
-    # 지원할 이미지 확장자 (필요시 .png 등 추가)
-    extensions = ["*.jpg", "*.jpeg", "*.png"]
+    
+    extensions = cfg.IMAGE_EXTENSIONS
     
     all_train_paths = []
     for ext in extensions:
         # rglob('**/')는 하위 폴더(dress, pants, shirt)를 모두 재귀적으로 검색
         all_train_paths.extend(train_dir.rglob(f'**/{ext}')) 
 
-    all_test_paths = []
+    all_validation_paths = []
     for ext in extensions:
-        all_test_paths.extend(validation_dir.rglob(f'**/{ext}'))
+        all_validation_paths.extend(validation_dir.rglob(f'**/{ext}'))
 
     # pathlib 객체를 문자열로 변환 (tf.data.Dataset은 문자열을 선호)
     all_train_paths = [str(p) for p in all_train_paths]
-    all_test_paths = [str(p) for p in all_test_paths]
+    all_validation_paths = [str(p) for p in all_validation_paths]
 
     # 1-2. 오류 검사 (기존 로직)
-    if not all_train_paths or not all_test_paths:
+    if not all_train_paths or not all_validation_paths:
         print("오류: 학습 또는 테스트 이미지가 없습니다.")
         print(f"  -> Train 경로: {train_dir} (파일 {len(all_train_paths)}개 찾음)")
-        print(f"  -> Test 경로: {validation_dir} (파일 {len(all_test_paths)}개 찾음)")
+        print(f"  -> validation 경로: {validation_dir} (파일 {len(all_validation_paths)}개 찾음)")
         print("경로와 확장자(jpg, png 등)를 확인하세요.")
         return
 
@@ -130,7 +129,7 @@ def main():
     train_dataset_ae = train_dataset_ae.prefetch(buffer_size=tf.data.AUTOTUNE)
     
     # 검증 데이터셋
-    validation_dataset_ae = tf.data.Dataset.from_tensor_slices(all_test_paths)
+    validation_dataset_ae = tf.data.Dataset.from_tensor_slices(all_validation_paths)
     validation_dataset_ae = validation_dataset_ae.map(load_and_preprocess_ae,
                                                      num_parallel_calls=tf.data.AUTOTUNE)
     validation_dataset_ae = validation_dataset_ae.batch(BATCH_SIZE)
@@ -138,7 +137,7 @@ def main():
     validation_dataset_ae = validation_dataset_ae.prefetch(buffer_size=tf.data.AUTOTUNE)
 
     print(f"Autoencoder 학습 데이터셋 준비 완료. (이미지 크기: {cfg.IMG_SIZE_AE})")
-    print(f"훈련 이미지: {len(all_train_paths)}, 검증 이미지: {len(all_test_paths)}")
+    print(f"훈련 이미지: {len(all_train_paths)}, 검증 이미지: {len(all_validation_paths)}")
 
     # 3. 모델 빌드 (기존과 동일)
     LATENT_DIM = 256
@@ -150,7 +149,7 @@ def main():
     autoencoder.summary()
 
     # 4. 콜백 정의 (기존과 동일)
-    autoencoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder" / "autoencoder_best.h5"
+    autoencoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder"/cfg.SEED_DIR / "autoencoder_best.h5"
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
     mc = ModelCheckpoint(str(autoencoder_save_path), monitor='val_loss', mode='min', verbose=1, save_best_only=True)
     callbacks_list = [es, mc]
@@ -158,7 +157,7 @@ def main():
     # 5. 학습 (기존과 동일)
     EPOCHS = 100 
     STEPS = len(all_train_paths) // BATCH_SIZE
-    VALIDATION_STEPS = len(all_test_paths) // BATCH_SIZE
+    VALIDATION_STEPS = len(all_validation_paths) // BATCH_SIZE
 
     history = autoencoder.fit(
         train_dataset_ae, 
@@ -178,7 +177,7 @@ def main():
         encoder_output = best_autoencoder.get_layer('latent_vector').output
         best_encoder = Model(best_autoencoder.input, encoder_output)
         
-        encoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder" / "encoder_model.h5"
+        encoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder"/cfg.SEED_DIR / "encoder_model.h5"
         best_encoder.save(encoder_save_path)
         
         print(f"최적의 Encoder 모델 추출 및 저장 완료: {encoder_save_path}")
@@ -188,7 +187,7 @@ def main():
         # ( ... 실패 시 백업 로직 ...)
 
     # 7. 학습 과정 시각화 (파일로 저장)
-    plot_save_path = cfg.MODEL_SAVE_DIR / "autoencoder" / "autoencoder_loss_plot.png"
+    plot_save_path = cfg.MODEL_SAVE_DIR / "autoencoder"/cfg.SEED_DIR / "autoencoder_loss_plot.png"
     plot_ae_history(history, plot_save_path)
 
 if __name__ == "__main__":

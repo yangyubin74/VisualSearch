@@ -27,7 +27,7 @@ def preprocess_siamese_query(img_array):
 def load_feature_extractor():
     """학습된 Siamese Network의 'Base Network' 모델을 로드."""
 
-    model_path = Path(config.MODEL_SAVE_DIR) / "siamesenetwork" / "base_network_best.h5" 
+    model_path = Path(config.MODEL_SAVE_DIR) / "siamesenetwork" /config.SEED_DIR/ "base_network_best.h5" 
     
     if not model_path.exists():
         print(f"  파일이 해당 경로에 있는지, 파일명('base_network_best.h5')이 정확한지 확인하세요.")
@@ -57,7 +57,7 @@ def load_feature_extractor():
 
 def load_search_database(split='train'):
     
-    feature_dir = Path(config.FEATURE_SAVE_DIR) / "siamesenetwork"
+    feature_dir = Path(config.FEATURE_SAVE_DIR) / "siamesenetwork"/ config.SEED_DIR
     
     all_db_features = []
     all_db_filenames = []
@@ -266,7 +266,7 @@ def main():
     
     print("\n Starting Siamese Network Similarity Search...")
     print(f" Target Image: {TARGET_IMAGE_PATH}")
-    print(f" Database: {Path(config.FEATURE_SAVE_DIR) / 'siamese'}")
+    print(f" Database: {Path(config.FEATURE_SAVE_DIR) / 'siamese' /config.SEED_DIR}")
     print(f" Relevant Category: '{RELEVANT_CATEGORY}' (K={TOP_K})")
     
     # 1. 특징 추출 모델(Base Network) 로드

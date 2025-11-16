@@ -182,7 +182,7 @@ def main():
 
     # 2. 데이터 경로 설정
     train_dir = cfg.BASE_IMAGE_DIR / "train"
-    validation_dir = cfg.BASE_IMAGE_DIR / "test"
+    validation_dir = cfg.BASE_IMAGE_DIR / "validation"
 
     print(f"  데이터 경로:")
     print(f"  훈련: {train_dir}")
@@ -225,7 +225,7 @@ def main():
     )
 
     # 9. 콜백 정의
-    save_path = cfg.MODEL_SAVE_DIR / "efficientnet" / "efficientnet_best.h5"
+    save_path = cfg.MODEL_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / "efficientnet_best.h5"
     es = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
     
     # ModelCheckpoint
@@ -283,7 +283,7 @@ def main():
     print("="*60 + "\n")
 
     # 12. 학습 과정 시각화
-    plot_save_path = cfg.MODEL_SAVE_DIR / "efficientnet" / "efficientnet_loss_plot.png"
+    plot_save_path = cfg.MODEL_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / "efficientnet_loss_plot.png"
     plot_history(history, plot_save_path)
 
 

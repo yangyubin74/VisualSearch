@@ -87,7 +87,7 @@ def main():
     image_paths, _ = cfg.load_image_paths()
     
     # 2. 파인튜닝된 EfficientNet 모델 로드
-    model_path = cfg.MODEL_SAVE_DIR / "efficientnet" / "efficientnet_best.h5"
+    model_path = cfg.MODEL_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / "efficientnet_best.h5"
     if not model_path.exists():
         print(f"\n 오류: 파인튜닝된 모델이 존재하지 않습니다")
         print(f"   경로: {model_path}")
@@ -155,13 +155,13 @@ def main():
                 total_stats['validation_failed'] += 1
             
             # 저장
-            save_path = cfg.FEATURE_SAVE_DIR / "efficientnet" / f"{c}_{s}_features.npy"
+            save_path = cfg.FEATURE_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / f"{c}_{s}_features.npy"
             np.save(save_path, features)
             print(f"   저장 완료: {save_path.name}")
             print(f"   형태: {features.shape}, 타입: {features.dtype}")
 
             # .npy 특징 벡터 저장
-            save_path = cfg.FEATURE_SAVE_DIR / "efficientnet" / f"{c}_{s}_features.npy"
+            save_path = cfg.FEATURE_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / f"{c}_{s}_features.npy"
             np.save(save_path, features)
             print(f"   특징 벡터 저장 완료: {save_path.name}")
             print(f"   형태: {features.shape}, 타입: {features.dtype}")

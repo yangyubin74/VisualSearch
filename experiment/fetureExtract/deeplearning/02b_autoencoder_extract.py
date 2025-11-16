@@ -89,7 +89,7 @@ def main():
     image_paths, _ = cfg.load_image_paths()
     
     # 2. 인코더 모델 로드
-    encoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder" / "encoder_model.h5"
+    encoder_save_path = cfg.MODEL_SAVE_DIR / "autoencoder"/cfg.SEED_DIR / "encoder_model.h5"
     if not encoder_save_path.exists():
         print(f"\n 오류: 학습된 인코더 모델이 없습니다!")
         print(f"  경로: {encoder_save_path}")
@@ -110,7 +110,7 @@ def main():
         
         for split_name in cfg.CLASSES:
             current_paths = image_paths[class_name][split_name]
-            save_path = cfg.FEATURE_SAVE_DIR / "autoencoder" / f"{class_name}_{split_name}_features.npy"
+            save_path = cfg.FEATURE_SAVE_DIR / "autoencoder"/cfg.SEED_DIR / f"{class_name}_{split_name}_features.npy"
             
             success = extract_and_save_features(
                 encoder, 
@@ -132,7 +132,7 @@ def main():
     print(f" 처리된 이미지: {total_processed}개")
     if total_failed > 0:
         print(f" 실패한 작업: {total_failed}개")
-    print(f" 저장 위치: {cfg.FEATURE_SAVE_DIR / 'autoencoder'}")
+    print(f" 저장 위치: {cfg.FEATURE_SAVE_DIR/cfg.SEED_DIR / 'autoencoder'}")
     print()
 
 if __name__ == "__main__":

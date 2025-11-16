@@ -45,6 +45,8 @@
     <Compile Include="fetureExtract\deeplearning\02b_autoencoder_extract.py" />
     <Compile Include="fetureExtract\deeplearning\03a_siamese_train.py" />
     <Compile Include="fetureExtract\deeplearning\03b_siamese_extract.py" />
+    <Compile Include="fetureExtract\deeplearning\04a_mobilenet_train.py" />
+    <Compile Include="fetureExtract\deeplearning\04b_mobilenet_extract.py" />
     <Compile Include="fetureExtract\deeplearning\common_config.py" />
     <Compile Include="Imagepreprocessing\preprocess_algorithm.py" />
     <Compile Include="Imagepreprocessing\preprocess_deeplearning.py" />
@@ -52,8 +54,8 @@
     <Compile Include="similarity\algorithm\search_glcm.py" />
     <Compile Include="similarity\algorithm\search_colormoment.py" />
     <Compile Include="similarity\algorithm_target_processing.py" />
-    <Compile Include="similarity\deeplearning\search_autoencoder_80percent.py" />
     <Compile Include="similarity\deeplearning\search_autoencoder.py" />
+    <Compile Include="similarity\deeplearning\search_mobilenet.py" />
     <Compile Include="similarity\deeplearning\search_siamese.py" />
     <Compile Include="similarity\deeplearning\search_efficientnet.py" />
     <Compile Include="similarity\deeplearning_target_processing.py" />

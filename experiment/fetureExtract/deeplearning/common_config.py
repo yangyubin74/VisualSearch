@@ -18,9 +18,33 @@ import config
 from common_utility import measure_process_time  as process_time
 
 
+# --- 1. 재현성을 위한 랜덤 시드 설정 ---
+SEED = config.SEED 
+
+os.environ['PYTHONHASHSEED'] = str(SEED) 
+random.seed(SEED)  
+np.random.seed(SEED) 
+tf.random.set_seed(SEED)
+
+# (TensorFlow 2.x 에서 GPU 관련 결정성을 보장하기 위한 추가 옵션)
+os.environ['TF_DETERMINISTIC_OPS'] = '0'
+
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        # GPU 메모리 동적 할당
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        print(f"✅ GPU 감지: {len(gpus)}개")
+    except RuntimeError as e:
+        print(f"⚠️ GPU 설정 오류: {e}")
+
+
 print("공통 설정 로드됨.")
 
 # --- 1. 기본 경로 설정 (사용자 업데이트 경로) ---
+SEED_DIR =config.SEED_DIR
+
 BASE_IMAGE_DIR = Path(config.MODEL_BASE_IMAGE_DIR)
 MODEL_SAVE_DIR = Path(config.MODEL_SAVE_DIR)
 FEATURE_SAVE_DIR = Path(config.FEATURE_SAVE_DIR)
@@ -33,21 +57,17 @@ SPLITS = config.SPLITS
 IMG_SIZE_EFFICIENTNET = config.IMG_SIZE_EFFICIENTNET
 IMG_SIZE_AE = config.IMG_SIZE_AE
 IMG_SIZE_SIAMESE =config.IMG_SIZE_SIAMESE
+IMG_SIZE_MOBILENET=config.IMG_SIZE_MOBILENET
+
 
 IMAGE_EXTENSIONS=config.IMAGE_EXTENSIONS
 
 # --- 3. 경로 생성 함수 ---
 def create_directories():
-    """필요한 모든 폴더를 생성."""
-    # 모델 저장 폴더 생성
-    (MODEL_SAVE_DIR / "efficientnet").mkdir(parents=True, exist_ok=True)
-    (MODEL_SAVE_DIR / "autoencoder").mkdir(parents=True, exist_ok=True)
-    (MODEL_SAVE_DIR / "siamesenetwork").mkdir(parents=True, exist_ok=True)
-
-    # 특징 저장 폴더 생성
-    (FEATURE_SAVE_DIR / "efficientnet").mkdir(parents=True, exist_ok=True)
-    (FEATURE_SAVE_DIR / "autoencoder").mkdir(parents=True, exist_ok=True)
-    (FEATURE_SAVE_DIR / "siamesenetwork").mkdir(parents=True, exist_ok=True)
+    folders = ["efficientnet", "autoencoder", "siamesenetwork", "mobilenetv3"]
+    for f in folders:
+        (MODEL_SAVE_DIR / f/ SEED_DIR).mkdir(parents=True, exist_ok=True)
+        (FEATURE_SAVE_DIR / f / SEED_DIR).mkdir(parents=True, exist_ok=True)
     print("모델 및 특징 저장 폴더 확인/생성 완료.")
 
 # --- 4. 이미지 경로 로드 함수 ---
@@ -69,7 +89,7 @@ def load_image_paths():
             
             image_paths[c][s] = current_paths
             
-            if s == 'train':
+            if c == 'train':
                 all_train_paths.extend(current_paths)
                 
     print(f"총 'dress' 학습 이미지: {len(image_paths['train']['dress'])}개")

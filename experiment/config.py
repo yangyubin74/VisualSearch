@@ -38,7 +38,9 @@ SOURCE_ALGORITHM_DIRS = [
 
 
 #========================딥러닝관련 옵션 [S]=========================
-
+ # 1st : 42 , 2nd : 43, 3rd : 44
+SEED=42
+SEED_DIR = f"randomseed_{SEED}"
 #GLCM 축소 Level 상수 값
 GLCM_LEVELS=256
 
@@ -49,10 +51,11 @@ MODEL_BASE_IMAGE_DIR ="/images/experimentimage/model"
 FEATURE_SAVE_DIR ="/workspace/Journal/experiment/dataset/model_features"
 
 CLASSES = ['dress', 'pants', 'shirt']
-SPLITS = ['train', 'test']
+SPLITS = ["train", "validation", "test"]
 
 IMG_SIZE_EFFICIENTNET = (224, 224)
 IMG_SIZE_AE = (128, 128)
 IMG_SIZE_SIAMESE = (224, 224)
+IMG_SIZE_MOBILENET=(224,224)
 
 #========================딥러닝관련 옵션 [E]=========================
