@@ -26,6 +26,13 @@ DB_PATH_HUMOMENT= OUTPUT_DIR / "Humemont.db"
 DB_PATH_HUMOMENT_80= OUTPUT_DIR / "Humoment_80.db"
 #========================알고리즘  특징점 추출한 DB 경로[E]=========================
 
+#알고리즘용 이미지 리사이즈 크기
+IMG_SIZE_ALGORITHM = (512, 512)
+
+#GLCM 축소 Level 상수 값
+GLCM_LEVELS=256
+
+
 #이미지 확장자 유형
 IMAGE_EXTENSIONS = ['*.png', '*.jpg', '*.jpeg', '*.PNG', '*.JPG', '*.JPEG']
 
@@ -39,10 +46,8 @@ SOURCE_ALGORITHM_DIRS = [
 
 #========================딥러닝관련 옵션 [S]=========================
  # 1st : 42 , 2nd : 43, 3rd : 44
-SEED=42
+SEED=44
 SEED_DIR = f"randomseed_{SEED}"
-#GLCM 축소 Level 상수 값
-GLCM_LEVELS=256
 
 
 

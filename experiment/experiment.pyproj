@@ -27,6 +27,7 @@
   <ItemGroup>
     <Folder Include="fetureExtract\algorithm\" />
     <Folder Include="fetureExtract\deeplearning\" />
+    <Folder Include="fetureExtract\measure\" />
     <Folder Include="Imagepreprocessing\" />
     <Folder Include="fetureExtract\" />
     <Folder Include="similarity\" />
@@ -48,6 +49,9 @@
     <Compile Include="fetureExtract\deeplearning\04a_mobilenet_train.py" />
     <Compile Include="fetureExtract\deeplearning\04b_mobilenet_extract.py" />
     <Compile Include="fetureExtract\deeplearning\common_config.py" />
+    <Compile Include="fetureExtract\measure\algo_evaluate_map.py" />
+    <Compile Include="fetureExtract\measure\deep_evaluate_map.py" />
+    <Compile Include="fetureExtract\measure\evaluate_flops.py" />
     <Compile Include="Imagepreprocessing\preprocess_algorithm.py" />
     <Compile Include="Imagepreprocessing\preprocess_deeplearning.py" />
     <Compile Include="similarity\algorithm\search_humoment.py" />

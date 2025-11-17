@@ -2,97 +2,136 @@ import tensorflow as tf
 import numpy as np
 import common_config as cfg
 import json
+import os
+from tqdm import tqdm
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+# MobileNetV3 전용 전처리 함수 임포트
+from tensorflow.keras.applications.mobilenet_v3 import preprocess_input
 
-from tensorflow.keras.applications.mobilenet_v3 import preprocess_input  # 변경
-
-def preprocess_mobilenet_extract(img_array):  # 이름 변경
-    """MobileNetV3 특징 추출용 전처리 (학습과 동일)"""
-    return preprocess_input(img_array)
+def extract_features_batch(feature_model, image_paths, batch_size=32):
+    """
+    [최적화 적용] 배치 단위로 이미지를 묶어서 특징을 추출합니다.
+    속도 향상의 핵심입니다.
+    """
+    num_images = len(image_paths)
+    # 모델의 출력 차원 확인 (MobileNetV3는 보통 1280 또는 1024)
+    if hasattr(feature_model.output, 'shape'):
+        feature_dim = feature_model.output.shape[-1]
+    else:
+        feature_dim = feature_model.output[0].shape[-1]
+        
+    features = np.zeros((num_images, feature_dim), dtype=np.float32)
+    failed_indices = []
+    
+    # IMG_SIZE는 MobileNet 설정 사용
+    target_size = cfg.IMG_SIZE_MOBILENET
+    
+    for i in tqdm(range(0, num_images, batch_size), desc="  배치 처리 중"):
+        batch_paths = image_paths[i:i+batch_size]
+        batch_images = []
+        batch_indices = []
+        
+        # 1. 배치 이미지 로드 및 전처리
+        for j, img_path in enumerate(batch_paths):
+            try:
+                img = load_img(img_path, target_size=target_size)
+                img_array = img_to_array(img)
+                batch_images.append(img_array)
+                batch_indices.append(i + j)
+            except Exception as e:
+                print(f"\n[경고] 이미지 로드 실패: {img_path} -> {e}")
+                failed_indices.append(i + j)
+        
+        # 2. 배치 예측 (GPU 가속 활용)
+        if batch_images:
+            try:
+                batch_array = np.array(batch_images)
+                # MobileNetV3 전용 전처리 적용
+                batch_preprocessed = preprocess_input(batch_array)
+                
+                # verbose=0으로 설정하여 로그 출력 부하 감소
+                batch_features = feature_model.predict(batch_preprocessed, verbose=0)
+                
+                # 결과 저장
+                for local_idx, global_idx in enumerate(batch_indices):
+                    features[global_idx] = batch_features[local_idx].flatten()
+                    
+            except Exception as e:
+                print(f"\n[오류] 배치 예측 실패 -> {e}")
+                failed_indices.extend(batch_indices)
+    
+    return features, failed_indices
 
 def main():
-    print("\n--- [MobileNetV3] 특징 추출 시작 ---")  # 변경
+    print("\n" + "="*60)
+    print(" [MobileNetV3] 특징 추출 시작 (배치 가속 모드)")
+    print("="*60)
     
-    # 1. 공통 설정에서 경로 및 파일 목록 로드
+    # 1. 공통 설정 로드
     cfg.create_directories()
     image_paths, _ = cfg.load_image_paths()
     
     # 2. 학습된 Base Network 로드
-    # common_config.py의 create_directories에 "mobilenetv3" 추가 가정
-    base_network_save_path = cfg.MODEL_SAVE_DIR / "mobilenetv3" /cfg.SEED_DIR/ "base_network_best.h5"  # 변경
+    base_network_save_path = cfg.MODEL_SAVE_DIR / "mobilenetv3" / cfg.SEED_DIR / "base_network_best.h5"
+    
     if not base_network_save_path.exists():
-        print(f"오류: 학습된 Base Network 모델이 없습니다! ({base_network_save_path})")
-        print("먼저 04a_mobilenet_train.py를 실행하세요.")  # 변경
+        print(f"오류: 모델 파일이 없습니다! ({base_network_save_path})")
         return
         
+    print(f"모델 로드 중: {base_network_save_path.name}...")
     loaded_base_network = tf.keras.models.load_model(base_network_save_path)
+    print("모델 로드 완료.")
     
-    # 특징 벡터 차원 안전하게 추출
-    try:
-        if hasattr(loaded_base_network.output, 'shape'):
-            feature_dim = loaded_base_network.output.shape[-1]
-        else:
-            feature_dim = loaded_base_network.output[0].shape[-1]
-        print(f"MobileNetV3 모델 로드 완료. 특징 벡터 차원: {feature_dim}")   
-    except Exception as e:
-        print(f"경고: 특징 벡터 차원을 가져올 수 없습니다: {e}")
-    
-    # 3. 모든 분할 및 클래스에 대해 특징 추출 실행
+    # 3. 특징 추출 실행
     total_processed = 0
-    total_features_saved = 0
-    
-    IMG_SIZE_MOBILENET = cfg.IMG_SIZE_MOBILENET
+    total_failed = 0
     
     for c in cfg.SPLITS:
         for s in cfg.CLASSES:
-            print(f"\nMobileNetV3: '{c}' / '{s}' 처리 중...")   
+            print(f"\n{'─'*60}")
+            print(f"처리 중: MobileNetV3 / {c} / {s}")
             
             current_paths = image_paths[c][s]
             if not current_paths:
-                print(f"경고: '{c}' / '{s}'에 이미지가 없습니다.")
+                print("경고: 이미지가 없습니다.")
                 continue
                 
-            # 공통 추출 함수 호출
-            features = cfg.extract_features_from_paths(
-                current_paths, 
+            # [핵심 변경] 배치 처리 함수 사용 (batch_size=32)
+            features, failed_indices = extract_features_batch(
                 loaded_base_network, 
-                preprocess_mobilenet_extract,  
-                IMG_SIZE_MOBILENET,            
-                desc=f"MobileNetV3 '{c}/{s}'"  
+                current_paths, 
+                batch_size=32
             )
             
-            # 특징 추출 검증
-            if features.size == 0:
-                print(f"경고: '{c}' / '{s}'에서 추출된 특징이 없습니다!")
-                continue
-                
+            # 유효성 검증 (NaN 체크)
             if np.isnan(features).any():
-                print(f"경고: '{c}' / '{s}' 특징에 NaN 값이 포함되어 있습니다!")
+                print("경고: NaN 값이 발견되어 0으로 대체합니다.")
                 features = np.nan_to_num(features, nan=0.0)
-            
-            # 4. 특징점 저장
-            save_path = cfg.FEATURE_SAVE_DIR / "mobilenetv3"/ cfg.SEED_DIR / f"{c}_{s}_features.npy"  # 변경
-            np.save(save_path, features)
-            print(f"저장 완료: {save_path} (형태: {features.shape})")
-            
-            filename_save_path = save_path.with_suffix('.json')
-            try:
-                with open(filename_save_path, 'w', encoding='utf-8') as f:
-                    json.dump(current_paths, f, ensure_ascii=False, indent=4)
-                print(f"파일명 리스트 저장 완료: {filename_save_path.name}")
-            except Exception as e:
-                print(f"파일명 리스트 저장 실패: {e}")
 
-            # 통계 업데이트
+            # 4. 저장
+            save_dir = cfg.FEATURE_SAVE_DIR / "mobilenetv3" / cfg.SEED_DIR
+            save_dir.mkdir(parents=True, exist_ok=True) # 폴더 안전 생성
+            
+            npy_path = save_dir / f"{c}_{s}_features.npy"
+            json_path = save_dir / f"{c}_{s}_features.json"
+            
+            # .npy 저장
+            np.save(npy_path, features)
+            print(f"  -> 특징 벡터 저장 완료: {npy_path.name} {features.shape}")
+            
+            # .json 저장
+            try:
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(current_paths, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"  -> 파일명 리스트 저장 실패: {e}")
+
             total_processed += len(current_paths)
-            total_features_saved += features.shape[0]
-    
-    # 최종 요약
+            total_failed += len(failed_indices)
+
     print("\n" + "="*60)
-    print(f"총 {total_processed}개 이미지 처리 완료")
-    print(f"총 {total_features_saved}개 특징 벡터 추출 및 저장 완료")
+    print(f" 최종 완료: 총 {total_processed}개 처리 (실패 {total_failed}개)")
     print("="*60)
-    print("\n--- [MobileNetV3] 모든 특징 추출 완료 ---")  # 변경
 
 if __name__ == "__main__":
-    
     cfg.measure_process_time(main)

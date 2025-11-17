@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from skimage.feature import graycomatrix, graycoprops
 import os
+import config
 #============================실행시간 측정 공통함수[S]===================================
 def measure_process_time(func):
     
@@ -35,7 +36,9 @@ def extract_color_moment_rgb(image):
     
     if image is None:
         raise ValueError("입력 이미지가 None입니다. 파일 경로를 확인하세요.")
-        
+    
+    image = cv2.resize(image, config.IMG_SIZE_ALGORITHM, interpolation=cv2.INTER_AREA)
+
     # BGR -> RGB 변환
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     r, g, b = cv2.split(rgb_image)
@@ -68,6 +71,8 @@ def extract_color_moment_rgb(image):
 #=====================GLCM 특징점 추출과 이미지 검색 시 공동으로 사용[S] ==================
 def extract_glcm(image, glcm_levels):
     
+    image = cv2.resize(image, config.IMG_SIZE_ALGORITHM, interpolation=cv2.INTER_AREA)
+
     # 그레이스케일 변환
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
@@ -105,6 +110,8 @@ def extract_glcm(image, glcm_levels):
 #=====================Hu Moment 특징점 추출과 이미지 검색 시 공동으로 사용[S] ============
 LOG_EPSILON = 1e-10
 def extract_hu_moments(image):
+
+    image = cv2.resize(image, config.IMG_SIZE_ALGORITHM, interpolation=cv2.INTER_AREA)
 
     """Hu Moments + 추가 형태 특징"""
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -158,10 +165,6 @@ def extract_hu_moments(image):
     return np.concatenate([log_hu, additional_features])
 
 #=====================Hu Moment 특징점 추출과 이미지 검색 시 공동으로 사용[E] ============
-
-
-
-
 
 def get_category_from_path(image_path, source_dirs):
     """이미지 경로에서 카테고리를 추출합니다."""
