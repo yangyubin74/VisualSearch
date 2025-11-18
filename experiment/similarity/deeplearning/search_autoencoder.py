@@ -13,7 +13,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import config 
-from common_utility import measure_process_time
+from common_utility import measure_process_time ,print_results,find_similar_images,calculate_metrics,extract_query_features,load_search_database
 
 # --- 설정값 ---
 # 상위 몇 개를 반환할지
@@ -52,226 +52,6 @@ def load_encoder_model():
                 
     return feature_model
     
-def load_search_database(split='train'):
-    """전체 'train' 스플릿의 특징 벡터와 파일명 리스트를 로드합니다."""
-    
-    feature_dir = Path(config.FEATURE_SAVE_DIR) / "autoencoder"/ config.SEED_DIR
-    
-    all_db_features = []
-    all_db_filenames = []
-    
-    print(f"전체 '{split}' 데이터베이스 로드 중...")
-    
-    if not hasattr(config, 'CLASSES'):
-        print("오류: config.py에 'CLASSES' 리스트가 정의되지 않았습니다.")
-        sys.exit(1)
-
-    for class_name in config.CLASSES:
-        npy_path = feature_dir / f"{split}_{class_name}_features.npy"
-        json_path = feature_dir / f"{split}_{class_name}_features.json"
-
-        if not npy_path.exists() or not json_path.exists():
-            print(f"  경고: '{split}_{class_name}' 데이터베이스 파일을 찾을 수 없어 건너뜁니다.")
-            continue
-
-        try:
-            db_features = np.load(npy_path)
-            with open(json_path, 'r', encoding='utf-8') as f:
-                db_filenames = json.load(f)
-            
-            all_db_features.append(db_features)
-            all_db_filenames.extend(db_filenames)
-            print(f"  로드: {class_name} (특징 {db_features.shape[0]}개, 파일 {len(db_filenames)}개)")
-
-        except Exception as e:
-            print(f"오류: {class_name} 데이터베이스 로드 실패: {e}")
-            sys.exit(1)
-
-    if not all_db_filenames:
-        print(f"  오류: '{split}' 스플릿에 대한 데이터베이스 파일이 전혀 없습니다.")
-        print(f"  경로: {feature_dir}")
-        print(f"  특징 추출 스크립트('..._extract.py')를 먼저 실행하세요.")
-        sys.exit(1)
-
-    final_db_features = np.vstack(all_db_features)
-    
-    print(f"\n  총 특징 벡터: {final_db_features.shape}")
-    print(f"    총 파일명: {len(all_db_filenames)}개")
-
-    if final_db_features.shape[0] != len(all_db_filenames):
-        print("오류: 최종 .npy 파일과 .json 파일의 항목 수가 일치하지 않습니다!")
-        sys.exit(1)
-        
-    return final_db_features, all_db_filenames
-
-def extract_query_features(model, img_path):
-    """단일 쿼리 이미지의 특징 벡터를 추출합니다."""
-    try:
-        # IMG_SIZE_EFFICIENTNET -> IMG_SIZE_AE
-        img = load_img(img_path, target_size=config.IMG_SIZE_AE)
-        img_array = img_to_array(img)
-        
-        # 'preprocess_input' 대신 0-1 사이로 정규화
-        img_normalized = img_array / 255.0 
-        
-        img_batch = np.expand_dims(img_normalized, axis=0)
-        
-        # 인코더 모델로 예측 (특징 추출)
-        features = model.predict(img_batch, verbose=0)
-        return features.flatten()
-    except Exception as e:
-        print(f"❌ 오류: 쿼리 이미지 '{img_path}' 처리 실패: {e}")
-        sys.exit(1)
-
-# --- 4. 카테고리 추출 헬퍼 (변경 없음) ---
-def get_category_from_path(path_str: str) -> str:
-    """파일 경로에서 카테고리를 추출."""
-    try:
-        return Path(path_str).parent.name
-    except Exception:
-        return "unknown"
-
-def find_similar_images(
-    target_feature: np.ndarray,
-    db_features: np.ndarray,
-    db_filenames: List[str],
-    metric: str = 'euclidean',
-    top_k: int = TOP_K
-) -> List[Dict]:
-    """
-    지정된 메트릭(거리)을 사용하여 유사한 이미지를 검색.
-    """
-    
-    # 1. 거리 계산 (벡터화된 방식)
-    query_features_2d = target_feature.reshape(1, -1)
-    distances = pairwise_distances(
-        query_features_2d, db_features, metric=metric
-    ).flatten()
-    
-    # 2. Top-K 정렬 (거리가 *낮은* 순)
-    top_indices = np.argsort(distances)[:top_k]
-    
-    # 3. 결과 포맷팅
-    results = []
-    for rank, idx in enumerate(top_indices, 1):
-        file_path = db_filenames[idx]
-        
-        results.append({
-            "rank": rank,
-            "image_path": file_path,
-            "category": get_category_from_path(file_path),
-            "distance": float(distances[idx])
-        })
-        
-    return results
-
-# --- 6. 성능 지표 계산 (변경 없음) ---
-def calculate_metrics(
-    results: List[Dict], 
-    relevant_category: str, 
-    total_relevant_count: int, 
-    k: int
-) -> Dict:
-    """Top-K 결과 리스트를 기반으로 성능 지표를 계산합니다."""
-    
-    r = [1 if item['category'] == relevant_category else 0 for item in results]
-    k_actual = len(r)
-    
-    if k_actual == 0:
-       return {'precision_at_k': 0.0, 'recall_at_k': 0.0, 'map_at_k': 0.0, 'ndcg_at_k': 0.0}
-
-    precision_at_k = np.sum(r) / k_actual
-    recall_at_k = np.sum(r) / total_relevant_count if total_relevant_count > 0 else 0.0
-    
-    precisions = []
-    relevant_count = 0
-    for i in range(k_actual):
-        if r[i] == 1:
-            relevant_count += 1
-            precisions.append(relevant_count / (i + 1))
-    map_at_k = np.mean(precisions) if precisions else 0.0
-    
-    dcg = np.sum([r[i] / np.log2(i + 2) for i in range(k_actual)])
-    ideal_r = sorted(r, reverse=True)
-    idcg = np.sum([ideal_r[i] / np.log2(i + 2) for i in range(k_actual)])
-    ndcg_at_k = dcg / idcg if idcg > 0 else 0.0
-
-    return {
-        "precision_at_k": precision_at_k,
-        "recall_at_k": recall_at_k,
-        "map_at_k": map_at_k,
-        "ndcg_at_k": ndcg_at_k
-    }
-
-# --- 7. [수정] 결과 출력 ---
-def print_results(
-    target_path: str,
-    euclidean_results: List[Dict],
-    manhattan_results: List[Dict],
-    euclidean_metrics: Dict,
-    manhattan_metrics: Dict,
-    relevant_category: str
-):
-    """검색 결과와 품질 지표를 보기 좋게 출력"""
-    print("\n" + "="*100)
-    
-    print("AUTOENCODER FEATURE SIMILARITY SEARCH RESULTS") 
-    print("="*100)
-    print(f"Target Image: {Path(target_path).name}")
-    print(f"Relevant Category (Ground Truth): '{relevant_category}'")
-    print("="*100)
- 
-    # --- Euclidean 결과 ---
-    print(f"\nTop {TOP_K} Similar Images - EUCLIDEAN DISTANCE (Lower is better)")
-    print("-" * 100)
-    for item in euclidean_results:
-        print(f"Rank {item['rank']:<2}:")
-        print(f"  Path:     {item['image_path']}")
-        print(f"  Category: {item['category']:<8} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  Distance: {item['distance']:.6f}")
-        print()
- 
-    # --- Manhattan 결과 ---
-    print(f"\nTop {TOP_K} Similar Images - MANHATTAN DISTANCE (Lower is better)")
-    print("-" * 100)
-    for item in manhattan_results:
-        print(f"Rank {item['rank']:<2}:")
-        print(f"  Path:     {item['image_path']}")
-        print(f"  Category: {item['category']:<8} {'<- [Relevant]' if item['category'] == relevant_category else ''}")
-        print(f"  Distance: {item['distance']:.6f}")
-        print()
- 
-    # --- 품질 지표(Metrics) 출력 ---
-    print("\n" + "="*100)
-    print(f"PERFORMANCE EVALUATION (K={TOP_K}, Relevant='{relevant_category}')")
-    print("="*100)
- 
-    print(f"| {'Metric':<16} | {'Euclidean':<15} | {'Manhattan':<15} | {'Description'} |")
-    print(f"|{'-'*18}|{'-'*17}|{'-'*17}|{'-'*33}|")
- 
-    def print_metric_row(metric_name, e_val, m_val, desc):
-        print(f"| {metric_name:<16} | {e_val:<15.4f} | {m_val:<15.4f} | {desc} |")
- 
-    total_relevant = TOTAL_RELEVANT_COUNT_MAP.get(relevant_category, 0)
-
-    print_metric_row("Precision@K", 
-                     euclidean_metrics['precision_at_k'], 
-                     manhattan_metrics['precision_at_k'], 
-                     "Top-K 중 정답 비율")
-    print_metric_row("Recall@K", 
-                     euclidean_metrics['recall_at_k'], 
-                     manhattan_metrics['recall_at_k'], 
-                     f"전체 정답 중 찾은 비율 (N={total_relevant})")
-    print_metric_row("mAP@K", 
-                     euclidean_metrics['map_at_k'], 
-                     manhattan_metrics['map_at_k'], 
-                     "정답 순서 고려 (정밀도 평균)")
-    print_metric_row("NDCG@K", 
-                     euclidean_metrics['ndcg_at_k'], 
-                     manhattan_metrics['ndcg_at_k'], 
-                     "정답 순서 가중치 (1위에 높은 점수)")
- 
-    print("="*100)
 
 
 def main():
@@ -289,12 +69,18 @@ def main():
     
     # 2. 타겟 이미지 특징 추출
     print("\n[Step 2] Extracting features from target image...")
-    query_features = extract_query_features(feature_model, TARGET_IMAGE_PATH)
+    autoencoder_preprocess = lambda x: x.astype('float32') / 255.0
+    query_features = extract_query_features(
+        feature_model, 
+        TARGET_IMAGE_PATH,
+        config.IMG_SIZE_AE,
+        preprocess_func=autoencoder_preprocess
+     )
     print(f"Feature vector extracted: shape={query_features.shape}")
     
     # 3. DB에서 특징 벡터 로드 (전체 'train' 세트)
     print("\n[Step 3] Loading features from database...")
-    db_features, db_filenames = load_search_database(split='train')
+    db_features, db_filenames = load_search_database(split='train',model_name='autoencoder')
     print(f"Loaded {len(db_filenames)} images from database")
     
     # 4. Euclidean 거리로 검색

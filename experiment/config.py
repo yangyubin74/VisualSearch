@@ -23,7 +23,7 @@ OUTPUT_DIR =  Path("/workspace/Journal/experiment/dataset/algorithm_features")
 DB_PATH_COLORMOMENT = OUTPUT_DIR / "ColorMoment.db"
 DB_PATH_GLCM= OUTPUT_DIR / "Glcm.db"
 DB_PATH_HUMOMENT= OUTPUT_DIR / "Humemont.db"
-DB_PATH_HUMOMENT_80= OUTPUT_DIR / "Humoment_80.db"
+DB_PATH_HUMOMENT_80= OUTPUT_DIR / "Humoment_80.db" 
 #========================알고리즘  특징점 추출한 DB 경로[E]=========================
 
 #알고리즘용 이미지 리사이즈 크기
@@ -46,7 +46,7 @@ SOURCE_ALGORITHM_DIRS = [
 
 #========================딥러닝관련 옵션 [S]=========================
  # 1st : 42 , 2nd : 43, 3rd : 44
-SEED=44
+SEED=42
 SEED_DIR = f"randomseed_{SEED}"
 
 

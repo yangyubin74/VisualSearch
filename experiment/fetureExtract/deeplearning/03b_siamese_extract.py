@@ -4,7 +4,7 @@ import common_config as cfg
 import json
 from tqdm import tqdm
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.applications.efficientnet import preprocess_input
+from tensorflow.keras.applications.mobilenet_v3 import preprocess_input
 
 def extract_features_batch(feature_model, image_paths, batch_size=32):
     """[최적화] 배치 단위 특징 추출 (Siamese용)"""

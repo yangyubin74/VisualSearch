@@ -5,8 +5,10 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Lambda, Dropout, BatchNormalization
-from tensorflow.keras.applications import EfficientNetB0
-from tensorflow.keras.applications.efficientnet import preprocess_input
+ 
+from tensorflow.keras.applications import MobileNetV3Small
+from tensorflow.keras.applications.mobilenet_v3 import preprocess_input as mobilenet_preprocess
+
 from tensorflow.keras.callbacks import EarlyStopping, Callback, ReduceLROnPlateau
 from tensorflow.keras import mixed_precision, regularizers
 import matplotlib.pyplot as plt
@@ -86,13 +88,13 @@ def load_and_preprocess_image_tf(path, img_size, augment=False):
         img = tf.clip_by_value(img, 0.0, 255.0)
     
     # Preprocessing
-    img = preprocess_input(img)
+    img = mobilenet_preprocess(img)
     return img
 
 
 def create_base_network(input_shape, embedding_dim):
     """Embedding을 생성하는 Base Network를 구성."""
-    base = EfficientNetB0(
+    base = MobileNetV3Small(
         weights='imagenet', 
         include_top=False, 
         pooling='avg', 
