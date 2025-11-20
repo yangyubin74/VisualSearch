@@ -26,9 +26,6 @@ DB_PATH_HUMOMENT= OUTPUT_DIR / "Humemont.db"
 DB_PATH_HUMOMENT_80= OUTPUT_DIR / "Humoment_80.db" 
 #========================알고리즘  특징점 추출한 DB 경로[E]=========================
 
-#알고리즘용 이미지 리사이즈 크기
-IMG_SIZE_ALGORITHM = (512, 512)
-
 #GLCM 축소 Level 상수 값
 GLCM_LEVELS=256
 

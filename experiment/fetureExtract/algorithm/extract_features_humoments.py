@@ -5,12 +5,15 @@ import glob
 import json
 from tqdm import tqdm
 from contextlib import contextmanager
+import multiprocessing as mp
+from functools import partial
 
 import os
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
-from common_utility import get_category_from_path,extract_hu_moments,measure_process_time
+from common_utility import get_category_from_path_dir,extract_hu_moments,measure_process_time
 
 
 SOURCE_DIRS = config.SOURCE_ALGORITHM_DIRS
@@ -30,7 +33,7 @@ def get_db_connection(db_path):
         conn.commit()
     except Exception as e:
         conn.rollback()
-        print(f"❌ 데이터베이스 오류: {e}")
+        print(f"데이터베이스 오류: {e}")
         raise
     finally:
         conn.close()
@@ -51,7 +54,7 @@ def setup_database(db_path):
         CREATE INDEX IF NOT EXISTS idx_processed_at 
         ON features(processed_at)
         """)
-    print(f"✓ 데이터베이스 설정 완료: {db_path}")
+    print(f"데이터베이스 설정 완료: {db_path}")
 
  
 def get_processed_images(cursor):
@@ -70,71 +73,82 @@ def collect_image_paths():
             print(f"  └ {directory}에서 {len(paths)}개의 {ext} 파일 발견")
     return image_paths
 
-
-def process_images(skip_existing=True):
-    """..."""
+def process_single_image(image_path, source_dirs):
+    """단일 이미지 처리 (워커 프로세스용)"""
+    try:
+        image = cv2.imread(image_path)
+        if image is None:
+            return None
+        
+        features = extract_hu_moments(image)
+        category = get_category_from_path_dir(image_path, source_dirs)
+        
+        return (image_path, category, json.dumps(features.tolist()))
+    except Exception as e:
+        print(f"에러 ({image_path}): {e}")
+        return None
+def process_images_parallel(skip_existing=True):
+    """
+    멀티프로세싱을 사용한 병렬 처리
+    """
     setup_database(DB_PATH)
     
     print("\n이미지 파일 목록 수집 중...")
     image_paths = collect_image_paths()
-    print(f"✓ 총 {len(image_paths)}개의 이미지 발견\n")
+    print(f"총 {len(image_paths)}개의 이미지 발견\n")
     
     with get_db_connection(DB_PATH) as conn:
         cursor = conn.cursor()
         
+        # 이미 처리된 이미지 필터링
         processed_images = get_processed_images(cursor) if skip_existing else set()
         if processed_images:
-            print(f"✓ {len(processed_images)}개의 이미지가 이미 처리됨\n")
+            print(f"{len(processed_images)}개의 이미지가 이미 처리됨\n")
+        
+        # 미처리 이미지만 선택
+        images_to_process = [p for p in image_paths if p not in processed_images]
+        print(f"처리할 이미지: {len(images_to_process)}개\n")
+        
+        # CPU 코어 수 결정 (전체 코어의 70% 사용)
+        num_workers = max(1, int(mp.cpu_count() * 0.7))
+        print(f"{num_workers}개의 워커 프로세스 사용\n")
+        
+        # 멀티프로세싱 풀 생성
+        process_func = partial(process_single_image, source_dirs=SOURCE_DIRS)
         
         batch_data = []
         success_count = 0
         error_count = 0
-        skipped_count = 0
         
-        for image_path in tqdm(image_paths, desc="Hu Moments 추출 중"):
-            if image_path in processed_images:
-                skipped_count += 1
-                continue
-            
-            try:
-                image = cv2.imread(image_path)
-                if image is None:
-                    print(f"\n⚠ 경고: 이미지를 읽을 수 없음: {image_path}")
+        with mp.Pool(processes=num_workers) as pool:
+            # 병렬 처리 + 진행률 표시
+            for result in tqdm(
+                pool.imap(process_func, images_to_process, chunksize=50),
+                total=len(images_to_process),
+                desc="Hu Moments 추출 중 (병렬)"
+            ):
+                if result is None:
                     error_count += 1
                     continue
                 
-                features = extract_hu_moments(image) 
-                features_json = json.dumps(features.tolist())
+                batch_data.append(result)
                 
-                # category를 먼저 계산.
-                category = get_category_from_path(image_path, SOURCE_DIRS)
-                
-                # batch_data에 (path, category, feature) 튜플을 저장.
-                batch_data.append((image_path, category, features_json))
-                
-                # 배치가 가득 찼으면 DB에 저장
+                # 배치 단위로 DB 저장
                 if len(batch_data) >= BATCH_SIZE:
-                   
                     cursor.executemany("""
                     INSERT OR REPLACE INTO features (image_path, category, feature_vector) 
                     VALUES (?, ?, ?)
-                    """, batch_data) 
-                    
+                    """, batch_data)
                     conn.commit()
                     success_count += len(batch_data)
                     batch_data = []
-                    
-            except Exception as e:
-                print(f"\n❌ 에러: 이미지 처리 실패 ({image_path}): {e}")
-                error_count += 1
         
         # 남은 데이터 저장
         if batch_data:
             cursor.executemany("""
             INSERT OR REPLACE INTO features (image_path, category, feature_vector) 
             VALUES (?, ?, ?)
-            """, batch_data) 
-            
+            """, batch_data)
             conn.commit()
             success_count += len(batch_data)
     
@@ -142,10 +156,8 @@ def process_images(skip_existing=True):
     print("\n" + "=" * 50)
     print("처리 완료!")
     print(f"  성공: {success_count}개")
-    print(f"  스킵: {skipped_count}개")
     print(f"  실패: {error_count}개")
     print("=" * 50)
-
 
 def get_statistics():
     """... (기존과 동일) ..."""
@@ -153,12 +165,13 @@ def get_statistics():
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM features")
         total = cursor.fetchone()[0]
-        print(f"\n✓ 데이터베이스에 저장된 특징 벡터 수: {total}")
+        print(f"\n데이터베이스에 저장된 특징 벡터 수: {total}")
 
 if __name__ == "__main__":
     try:
-        measure_process_time(process_images)
+         
+        measure_process_time(lambda: process_images_parallel(skip_existing=True))
         get_statistics()
     except Exception as e:
-        print(f"\n❌ 프로그램 실행 중 오류 발생: {e}")
+        print(f"\n프로그램 실행 중 오류 발생: {e}")
         raise
