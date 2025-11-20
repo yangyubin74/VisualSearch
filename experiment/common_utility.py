@@ -15,6 +15,10 @@ import sys
 import os
 import config
 
+import psutil
+from dataclasses import dataclass
+from typing import Optional
+
 #============================실행시간 측정 공통함수[S]===================================
 def measure_process_time(func):
     
@@ -439,3 +443,208 @@ def load_search_database(split='train',model_name=""):
         sys.exit(1)
         
     return final_db_features, all_db_filenames
+
+# ===================== 쿼리 이미지 특징점 추출 헬퍼 함수 끝 =====================
+
+
+
+# ============================== FLOPS 측정 관련 함수 [S] ==============================
+@dataclass
+class FLOPSResult:
+    """FLOPS 측정 결과를 저장하는 데이터 클래스"""
+    total_operations: int  # 총 연산 횟수 (FLOPs)
+    elapsed_time: float  # 소요 시간 (초)
+    flops: float  # FLOPS (초당 연산 횟수)
+    gflops: float  # GFLOPS (10억 연산/초)
+    num_images: int  # 처리한 이미지 수
+    flops_per_image: float  # 이미지당 FLOPS
+    
+    def __str__(self):
+        return (
+            f"{'='*60}\n"
+            f"FLOPS 측정 결과\n"
+            f"{'='*60}\n"
+            f"총 연산 횟수:        {self.total_operations:,} FLOPs\n"
+            f"소요 시간:          {self.elapsed_time:.2f}초\n"
+            f"FLOPS:              {self.flops:,.0f} ops/sec\n"
+            f"GFLOPS:             {self.gflops:.4f} GFLOPS\n"
+            f"처리 이미지 수:      {self.num_images:,}개\n"
+            f"이미지당 FLOPS:      {self.flops_per_image:,.0f} ops/sec\n"
+            f"{'='*60}"
+        )
+
+class FLOPSCounter:
+    """연산 횟수를 카운트하는 클래스"""
+    
+    def __init__(self):
+        self.reset()
+    
+    def reset(self):
+        """카운터 초기화"""
+        self.total_ops = 0
+        self.num_images = 0
+    
+    def count_color_moment_ops(self, image_shape):
+        """Color Moment 연산 횟수 계산"""
+        h, w, c = image_shape
+        pixels = h * w
+        
+        ops = 0
+        # 각 채널별로
+        for _ in range(c):
+            # Mean: (pixels-1)번의 덧셈 + 1번의 나눗셈
+            ops += pixels + 1
+            
+            # Std: (pixels)번의 제곱 + (pixels-1)번의 덧셈 + 1번의 나눗셈 + 1번의 제곱근
+            ops += pixels * 2 + pixels + 2
+            
+            # Skewness: 복잡한 연산 (근사치)
+            # (x-mean)^3 계산: pixels * 3번 연산
+            # 합계 및 정규화: pixels + 5번 정도
+            ops += pixels * 4 + 5
+        
+        # RGB 변환 연산 (근사치)
+        ops += pixels * 3
+        
+        self.total_ops += ops
+        self.num_images += 1
+        return ops
+    
+    def count_glcm_ops(self, image_shape, glcm_levels=256, num_angles=4):
+        """GLCM 연산 횟수 계산"""
+        h, w = image_shape[:2]
+        pixels = h * w
+        
+        ops = 0
+        
+        # 그레이스케일 변환 (RGB -> Gray)
+        ops += pixels * 3
+        
+        # GLCM 레벨 축소
+        if glcm_levels < 256:
+            ops += pixels * 2  # 나눗셈 + 곱셈
+        
+        # GLCM 행렬 계산 (각 각도별)
+        # 근사치: pixels * 비교연산 * 각도 수
+        ops += pixels * 2 * num_angles
+        
+        # GLCM 정규화
+        ops += glcm_levels * glcm_levels * num_angles
+        
+        # 5가지 속성 계산 (contrast, dissimilarity, homogeneity, energy, correlation)
+        # 각 속성은 GLCM 행렬 전체를 순회
+        num_properties = 5
+        ops += glcm_levels * glcm_levels * num_angles * num_properties * 3
+        
+        # 평균 및 표준편차 계산
+        ops += num_properties * num_angles * 2
+        
+        self.total_ops += ops
+        self.num_images += 1
+        return ops
+    
+    def count_hu_moments_ops(self, image_shape):
+        """Hu Moments 연산 횟수 계산"""
+        h, w = image_shape[:2]
+        pixels = h * w
+        
+        ops = 0
+        
+        # 그레이스케일 변환
+        ops += pixels * 3
+        
+        # 이진화 (Otsu threshold)
+        # 히스토그램 계산 + threshold 찾기
+        ops += pixels + 256 * 10
+        
+        # Moments 계산 (m00, m10, m01, m20, m11, m02, m30, m21, m12, m03)
+        # 각 moment는 픽셀 순회 + 곱셈/덧셈
+        num_moments = 10
+        ops += pixels * num_moments * 3
+        
+        # Hu Moments 계산 (7개)
+        # 복잡한 수식이지만 근사치로 계산
+        ops += 7 * 20  # 각 Hu moment당 약 20번의 연산
+        
+        # Log 변환
+        ops += 7 * 2
+        
+        # 추가 형태 특징 (5개)
+        # Contour 찾기 (근사치)
+        ops += pixels * 2
+        
+        # 면적, 둘레, 종횡비, 원형도, 볼록성 계산
+        ops += 100  # 근사치
+        
+        self.total_ops += ops
+        self.num_images += 1
+        return ops
+    
+    def get_result(self, elapsed_time: float) -> FLOPSResult:
+        """측정 결과 반환"""
+        if elapsed_time <= 0:
+            flops = 0
+            gflops = 0
+            flops_per_image = 0
+        else:
+            flops = self.total_ops / elapsed_time
+            gflops = flops / 1e9
+            flops_per_image = flops / self.num_images if self.num_images > 0 else 0
+        
+        return FLOPSResult(
+            total_operations=self.total_ops,
+            elapsed_time=elapsed_time,
+            flops=flops,
+            gflops=gflops,
+            num_images=self.num_images,
+            flops_per_image=flops_per_image
+        )
+
+
+def measure_process_time_with_flops(func, flops_counter: Optional[FLOPSCounter] = None):
+    """
+    실행 시간과 FLOPS를 함께 측정하는 함수
+    
+    Args:
+        func: 실행할 함수
+        flops_counter: FLOPSCounter 인스턴스 (선택)
+    
+    Returns:
+        FLOPSResult 또는 None (flops_counter가 없는 경우)
+    """
+    # 시작 시간 출력
+    start_datetime = datetime.now()
+    formatted_start = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"Start measurement =============>: {formatted_start}")
+
+    # 처리 시간 측정
+    total_start = time.time()
+    result = func()  # 함수 실행
+    total_elapsed = time.time() - total_start
+    
+    print(f"전체 특징점 추출 총 소요 시간: {total_elapsed:.2f}초")
+
+    # 종료 시간 출력
+    end_datetime = datetime.now()
+    formatted_end = end_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"End measurement =============>: {formatted_end}")
+    
+    # FLOPS 결과 출력
+    if flops_counter is not None:
+        flops_result = flops_counter.get_result(total_elapsed)
+        print(f"\n{flops_result}")
+        
+        print("\n\n")
+        print("===========Hello, this is Yubin Yang.=============================")
+        print(f"Measurement Time:{formatted_start} ~ {formatted_end}")
+        print("=========== I am Korean.==========================================")
+        
+        return flops_result
+    else:
+        print("\n\n")
+        print("===========Hello, this is Yubin Yang.=============================")
+        print(f"Measurement Time:{formatted_start} ~ {formatted_end}")
+        print("=========== I am Korean.==========================================")
+        return None
+
+# ============================== FLOPS 측정 관련 함수 [E] ==============================
