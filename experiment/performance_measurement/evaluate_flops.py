@@ -1,116 +1,345 @@
+"""
+딥러닝 모델 FLOPS 측정 - thop 라이브러리 사용
+Autoencoder, EfficientNet, Siamese Network, MobileNetV3
+"""
+
 import torch
-import torchvision.models as models
 import torch.nn as nn
-import sys
-import subprocess
+from torchvision import models
+from thop import profile, clever_format
+import time
 
-# 1. thop 라이브러리 설치 (터미널에서 먼저 실행 권장)
-# pip install thop
-try:
-    from thop import profile
-except ImportError:
-    print("thop 라이브러리를 설치합니다...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "thop"])
-    from thop import profile
+# ====================================================================
+# 1. 설치 필요
+# ====================================================================
+"""
+pip install thop
+pip install torchvision
+"""
 
-# --- 🚨 중요: 사용자 정의 모델 ---
-# 아래 클래스들은 예시입니다.
-# 사용자의 실제 Autoencoder와 SiameseNetwork 모델 정의로 교체해야 합니다.
-
-class YourAutoencoder(nn.Module):
-    def __init__(self):
-        super(YourAutoencoder, self).__init__()
-        # 🚨 예시: 사용자의 실제 '인코더' 레이어로 교체하세요.
+# ====================================================================
+# 2. Autoencoder 예제
+# ====================================================================
+class Autoencoder(nn.Module):
+    def __init__(self, input_dim=784, encoding_dim=64):
+        super(Autoencoder, self).__init__()
+        # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 16, 3, padding=1),
+            nn.Linear(input_dim, 256),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(16, 32, 3, padding=1),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.Linear(128, encoding_dim),
+            nn.ReLU()
+        )
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(encoding_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, input_dim),
+            nn.Sigmoid()
         )
     
     def forward(self, x):
-        # '특징 추출'을 비교하는 것이므로 인코더 부분만 계산합니다.
-        return self.encoder(x)
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
 
-class YourSiameseNetwork(nn.Module):
+def measure_autoencoder_flops():
+    """Autoencoder FLOPS 측정"""
+    print("="*60)
+    print("Autoencoder FLOPS 측정")
+    print("="*60)
+    
+    model = Autoencoder(input_dim=784, encoding_dim=64)
+    model.eval()
+    
+    # 입력 데이터 (batch_size=1, input_dim=784)
+    input_tensor = torch.randn(1, 784)
+    
+    # FLOPS 측정
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    flops, params = clever_format([flops, params], "%.3f")
+    
+    print(f"FLOPs: {flops}")
+    print(f"Parameters: {params}")
+    print()
+
+
+# ====================================================================
+# 3. EfficientNet 예제
+# ====================================================================
+def measure_efficientnet_flops():
+    """EfficientNet FLOPS 측정"""
+    print("="*60)
+    print("EfficientNet-B0 FLOPS 측정")
+    print("="*60)
+    
+    # EfficientNet-B0 모델 로드
+    model = models.efficientnet_b0(pretrained=False)
+    model.eval()
+    
+    # 입력 데이터 (batch_size=1, channels=3, height=224, width=224)
+    input_tensor = torch.randn(1, 3, 224, 224)
+    
+    # FLOPS 측정
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    flops, params = clever_format([flops, params], "%.3f")
+    
+    print(f"FLOPs: {flops}")
+    print(f"Parameters: {params}")
+    print()
+
+
+# ====================================================================
+# 4. Siamese Network 예제
+# ====================================================================
+class SiameseNetwork(nn.Module):
     def __init__(self):
-        super(YourSiameseNetwork, self).__init__()
-        # 🚨 예시: 사용자의 실제 '백본(backbone)' 네트워크로 교체하세요.
-        self.backbone = nn.Sequential(
-            nn.Conv2d(3, 16, 3, padding=1),
+        super(SiameseNetwork, self).__init__()
+        # 공유되는 CNN 백본
+        self.cnn = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=10),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(16, 32, 3, padding=1),
+            nn.MaxPool2d(2),
+            nn.Conv2d(64, 128, kernel_size=7),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Flatten(),
-            nn.Linear(32 * 128 * 128, 128) # 512x512 입력 기준
+            nn.MaxPool2d(2),
+            nn.Conv2d(128, 128, kernel_size=4),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(128, 256, kernel_size=4),
+            nn.ReLU(),
         )
-
-    def forward_one(self, x):
-        # 1개 이미지를 받아 특징 벡터를 반환하는 부분
-        return self.backbone(x)
-
-    def forward(self, input1, input2=None):
-        # 특징 추출 시에는 입력 1개만 처리
-        if input2 is None:
-            return self.forward_one(input1)
         
-        # (훈련 시)
-        output1 = self.forward_one(input1)
-        output2 = self.forward_one(input2)
+        self.fc = nn.Sequential(
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.Sigmoid(),
+            nn.Linear(4096, 256),
+        )
+    
+    def forward_once(self, x):
+        output = self.cnn(x)
+        output = output.view(output.size()[0], -1)
+        output = self.fc(output)
+        return output
+    
+    def forward(self, input1, input2):
+        output1 = self.forward_once(input1)
+        output2 = self.forward_once(input2)
         return output1, output2
 
-# -----------------------------------
-
-# 2. 더미 입력 텐서 생성 (배치 1, 3채널, 512x512 크기)
-# 🚨🚨🚨 사용자의 실제 실험(특징 추출) 시의 이미지 크기와 동일해야 합니다!
-input_size = (1, 3, 512, 512)
-dummy_input = torch.randn(input_size)
-print(f"Using Dummy Input Size: {dummy_input.shape}\n")
-
-# 3. 프로파일링할 모델 목록
-models_to_profile = {
-    # 🚨 EfficientNet-B0 대신 실제 사용한 버전(예: efficientnet_b5())으로 변경하세요.
-    "EfficientNet-B0": models.efficientnet_b0(), 
-    "MobileNetV3-Large": models.mobilenet_v3_large(),
-    "YourAutoencoder (Encoder)": YourAutoencoder(),
-    "YourSiameseNetwork (Backbone)": YourSiameseNetwork()
-}
-
-results = {}
-
-# 4. 각 모델별 FLOPs 및 파라미터 계산
-for model_name, model in models_to_profile.items():
-    model.eval() # 평가 모드로 설정
+def measure_siamese_flops():
+    """Siamese Network FLOPS 측정"""
+    print("="*60)
+    print("Siamese Network FLOPS 측정")
+    print("="*60)
     
-    inputs_tuple = (dummy_input, )
+    model = SiameseNetwork()
+    model.eval()
     
-    try:
-        flops, params = profile(model, inputs=inputs_tuple, verbose=False)
-        results[model_name] = {
-            "FLOPs (G)": flops / 1e9,  # GFLOPs (10억 단위)
-            "Params (M)": params / 1e6   # 파라미터 (백만 단위)
-        }
-    except Exception as e:
-        results[model_name] = {"Error": str(e)}
+    # 입력 데이터 (이미지 쌍)
+    input1 = torch.randn(1, 3, 105, 105)
+    input2 = torch.randn(1, 3, 105, 105)
+    
+    # FLOPS 측정 (단일 입력 기준)
+    flops, params = profile(model.cnn, inputs=(input1,), verbose=False)
+    
+    # Siamese는 같은 네트워크를 2번 사용하므로 x2
+    total_flops = flops * 2
+    
+    # FC layer 추가
+    fc_input = torch.randn(1, 256 * 6 * 6)
+    fc_flops, fc_params = profile(model.fc, inputs=(fc_input,), verbose=False)
+    total_flops += fc_flops * 2
+    
+    total_flops, params = clever_format([total_flops, params], "%.3f")
+    
+    print(f"FLOPs (전체): {total_flops}")
+    print(f"Parameters: {params}")
+    print()
 
-# 5. 결과 출력
-print("--- FLOPs 및 파라미터 수 ---")
-for model_name, metrics in results.items():
-    print(f"\nModel: {model_name}")
-    if "Error" in metrics:
-        print(f"  Error calculating FLOPs: {metrics['Error']}")
-    else:
-        # GFLOPs = Giga FLOPs (10억 번 연산)
-        print(f"  FLOPs: {metrics['FLOPs (G)']:.2f} G")
-        # M Params = Mega Params (백만 개 파라미터)
-        print(f"  Params: {metrics['Params (M)']:.2f} M")
 
-print("\n--- 🚨 중요 🚨 ---")
-print("1. 'YourAutoencoder'와 'YourSiameseNetwork'는 예시 모델입니다.")
-print("   논문의 결과로 사용하려면 반드시 사용자의 실제 모델 코드로 교체해야 합니다.")
-print("2. 'EfficientNet-B0'를 실제 사용한 버전(예: B5 또는 B7)으로 변경하세요.")
-print(f"3. 이 계산은 입력 크기 {input_size}를 기준으로 합니다. 이 크기가 실제 실험과 동일한지 꼭 확인하세요.")
+# ====================================================================
+# 5. MobileNetV3 예제
+# ====================================================================
+def measure_mobilenetv3_flops():
+    """MobileNetV3 FLOPS 측정"""
+    print("="*60)
+    print("MobileNetV3-Large FLOPS 측정")
+    print("="*60)
+    
+    # MobileNetV3-Large 모델 로드
+    model = models.mobilenet_v3_large(pretrained=False)
+    model.eval()
+    
+    # 입력 데이터
+    input_tensor = torch.randn(1, 3, 224, 224)
+    
+    # FLOPS 측정
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    flops, params = clever_format([flops, params], "%.3f")
+    
+    print(f"FLOPs: {flops}")
+    print(f"Parameters: {params}")
+    print()
+    
+    # MobileNetV3-Small도 측정
+    print("="*60)
+    print("MobileNetV3-Small FLOPS 측정")
+    print("="*60)
+    
+    model_small = models.mobilenet_v3_small(pretrained=False)
+    model_small.eval()
+    
+    flops, params = profile(model_small, inputs=(input_tensor,), verbose=False)
+    flops, params = clever_format([flops, params], "%.3f")
+    
+    print(f"FLOPs: {flops}")
+    print(f"Parameters: {params}")
+    print()
+
+
+# ====================================================================
+# 6. 모든 모델 비교
+# ====================================================================
+def compare_all_models():
+    """모든 모델의 FLOPS 비교"""
+    print("\n" + "="*80)
+    print(" "*20 + "딥러닝 모델 FLOPS 비교")
+    print("="*80)
+    
+    models_info = []
+    
+    # Autoencoder
+    model = Autoencoder()
+    input_tensor = torch.randn(1, 784)
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    models_info.append(("Autoencoder", flops, params))
+    
+    # EfficientNet-B0
+    model = models.efficientnet_b0(pretrained=False)
+    input_tensor = torch.randn(1, 3, 224, 224)
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    models_info.append(("EfficientNet-B0", flops, params))
+    
+    # Siamese Network (근사치)
+    model = SiameseNetwork()
+    input1 = torch.randn(1, 3, 105, 105)
+    flops_cnn, _ = profile(model.cnn, inputs=(input1,), verbose=False)
+    fc_input = torch.randn(1, 256 * 6 * 6)
+    flops_fc, params = profile(model.fc, inputs=(fc_input,), verbose=False)
+    total_flops = (flops_cnn + flops_fc) * 2
+    models_info.append(("Siamese Network", total_flops, params))
+    
+    # MobileNetV3-Large
+    model = models.mobilenet_v3_large(pretrained=False)
+    input_tensor = torch.randn(1, 3, 224, 224)
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    models_info.append(("MobileNetV3-Large", flops, params))
+    
+    # MobileNetV3-Small
+    model = models.mobilenet_v3_small(pretrained=False)
+    input_tensor = torch.randn(1, 3, 224, 224)
+    flops, params = profile(model, inputs=(input_tensor,), verbose=False)
+    models_info.append(("MobileNetV3-Small", flops, params))
+    
+    # 테이블 출력
+    print(f"\n{'Model':<25} {'FLOPs':<20} {'Parameters':<20} {'GFLOPS':<15}")
+    print("-"*80)
+    
+    for name, flops, params in models_info:
+        flops_str, params_str = clever_format([flops, params], "%.3f")
+        gflops = flops / 1e9
+        print(f"{name:<25} {flops_str:<20} {params_str:<20} {gflops:<15.4f}")
+    
+    print("="*80)
+
+
+# ====================================================================
+# 7. 실제 추론 시간 측정 함수
+# ====================================================================
+def measure_inference_time(model, input_tensor, num_runs=100):
+    """실제 추론 시간 측정"""
+    model.eval()
+    
+    # Warm-up
+    with torch.no_grad():
+        for _ in range(10):
+            _ = model(input_tensor)
+    
+    # 실제 측정
+    start_time = time.time()
+    with torch.no_grad():
+        for _ in range(num_runs):
+            _ = model(input_tensor)
+    elapsed_time = time.time() - start_time
+    
+    avg_time = elapsed_time / num_runs
+    return avg_time * 1000  # ms로 변환
+
+
+def compare_with_inference_time():
+    """FLOPS와 실제 추론 시간 비교"""
+    print("\n" + "="*80)
+    print(" "*15 + "FLOPS vs 실제 추론 시간 비교")
+    print("="*80)
+    
+    print(f"\n{'Model':<25} {'FLOPs':<15} {'GFLOPS':<12} {'Inference Time (ms)':<20}")
+    print("-"*80)
+    
+    # EfficientNet-B0
+    model = models.efficientnet_b0(pretrained=False)
+    input_tensor = torch.randn(1, 3, 224, 224)
+    flops, _ = profile(model, inputs=(input_tensor,), verbose=False)
+    inference_time = measure_inference_time(model, input_tensor)
+    flops_str, _ = clever_format([flops], "%.3f")
+    gflops = flops / 1e9
+    print(f"{'EfficientNet-B0':<25} {flops_str[0]:<15} {gflops:<12.4f} {inference_time:<20.2f}")
+    
+    # MobileNetV3-Large
+    model = models.mobilenet_v3_large(pretrained=False)
+    flops, _ = profile(model, inputs=(input_tensor,), verbose=False)
+    inference_time = measure_inference_time(model, input_tensor)
+    flops_str, _ = clever_format([flops], "%.3f")
+    gflops = flops / 1e9
+    print(f"{'MobileNetV3-Large':<25} {flops_str[0]:<15} {gflops:<12.4f} {inference_time:<20.2f}")
+    
+    # MobileNetV3-Small
+    model = models.mobilenet_v3_small(pretrained=False)
+    flops, _ = profile(model, inputs=(input_tensor,), verbose=False)
+    inference_time = measure_inference_time(model, input_tensor)
+    flops_str, _ = clever_format([flops], "%.3f")
+    gflops = flops / 1e9
+    print(f"{'MobileNetV3-Small':<25} {flops_str[0]:<15} {gflops:<12.4f} {inference_time:<20.2f}")
+    
+    print("="*80)
+    print("※ FLOPS가 낮을수록 계산량이 적고, 일반적으로 추론 시간도 짧습니다.")
+    print("※ 실제 추론 시간은 하드웨어, 메모리 접근 패턴 등에 영향을 받습니다.")
+
+
+# ====================================================================
+# 8. 메인 실행
+# ====================================================================
+if __name__ == "__main__":
+    print("\n" + "="*80)
+    print(" "*20 + "딥러닝 모델 FLOPS 측정 시작")
+    print("="*80 + "\n")
+    
+    # 개별 모델 측정
+    measure_autoencoder_flops()
+    measure_efficientnet_flops()
+    measure_siamese_flops()
+    measure_mobilenetv3_flops()
+    
+    # 전체 비교
+    compare_all_models()
+    
+    # 실제 추론 시간과 비교
+    compare_with_inference_time()
+    
+    print("\n" + "="*80)
+    print(" "*25 + "측정 완료!")
+    print("="*80)
