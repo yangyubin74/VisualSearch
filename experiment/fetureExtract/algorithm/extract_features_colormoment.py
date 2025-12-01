@@ -183,7 +183,7 @@ if __name__ == "__main__":
         flops_result = flops_counter.get_result(elapsed_time)
         print(f"\n{'='*60}")
         print("FLOPS 측정 결과")
-        print(f"{'='*60}")
+        print(f"{'='*60}")   
         print(f"총 연산 횟수:        {total_ops:,} FLOPs")
         print(f"소요 시간:          {elapsed_time:.2f}초")
         print(f"FLOPS:              {total_ops/elapsed_time:,.0f} ops/sec")
