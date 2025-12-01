@@ -48,7 +48,6 @@ def measure_process_time(func):
 
 #=====================Colormoment 특징점 추출과 이미지 검색 시 공동으로 사용[S] ===========
 def extract_color_moment_rgb(image):
-    
     if image is None:
         raise ValueError("입력 이미지가 None입니다.")
     
@@ -165,7 +164,7 @@ def extract_hu_moments(image):
         # 볼록성 (Convexity)
         hull = cv2.convexHull(largest)
         hull_area = cv2.contourArea(hull)
-        convexity = cv2.contourArea(largest) / hull_area if hull_area > 0 else 0
+        convexity = cv2.contourArea(largest) / hull_area if hull_area > 0 else 0  
         
         additional_features = np.array([
             area_ratio, 
