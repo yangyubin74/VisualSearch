@@ -50,31 +50,35 @@ def measure_process_time(func):
 def extract_color_moment_rgb(image):
     
     if image is None:
-        raise ValueError("입력 이미지가 None입니다. 파일 경로를 확인하세요.")
+        raise ValueError("입력 이미지가 None입니다.")
     
-    # BGR -> RGB 변환
+    # 1. BGR -> RGB 변환
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    r, g, b = cv2.split(rgb_image)
-    channels = [r, g, b]
+    
+    # 2. OpenCV 최적화 함수로 평균(Mean)과 표준편차(Std)를 한 번에 계산 (C++ 속도)
+    # shape: (3, 1) -> flatten -> (3,)
+    means, stds = cv2.meanStdDev(rgb_image)
+    means = means.flatten()
+    stds = stds.flatten()
     
     features = []
-    for channel in channels:
-        channel_flat = channel.ravel()
+    
+    # 3. 채널별 Skewness 벡터 연산 최적화
+    for i in range(3):
+        m = means[i]
+        s = stds[i]
         
-        # 픽셀이 없는 경우(e.g., 마스킹된 이미지) 방지
-        if channel_flat.size == 0:
-            features.extend([0.0, 0.0, 0.0])
-            continue
-            
-        mean = np.mean(channel_flat)
-        std = np.std(channel_flat)
-        skewness = skew(channel_flat)
-        
-        # skewness가 nan일 경우 (e.g., 모든 픽셀 값이 동일) 0으로 처리
-        if np.isnan(skewness):
+        # 표준편차가 0이면(단색 이미지) 왜도도 0
+        if s == 0:
             skewness = 0.0
+        else:
+            # NumPy 벡터 연산으로 왜도 직접 계산 (Scipy보다 빠름)
+            # 수식: E[ ((x-mu)/sigma)^3 ]
+            channel = rgb_image[:, :, i]
+            # (x - mean) 계산 비용 최소화
+            skewness = np.mean(((channel - m) / s) ** 3)
             
-        features.extend([mean, std, skewness])
+        features.extend([m, s, skewness])
     
     return np.array(features)
 
