@@ -75,7 +75,7 @@ def load_and_preprocess_image_tf(path, img_size, augment=False):
     """
     # 이미지 읽기
     img = tf.io.read_file(path)
-    img = tf.io.decode_jpeg(img, channels=3)  # decode_image 대신 decode_jpeg (더 빠름)
+    img = tf.io.decode_jpeg(img, channels=3)  
     img = tf.image.resize(img, img_size)
     
     # Data Augmentation (조건부)
@@ -266,7 +266,7 @@ def create_triplet_dataset_optimized(paths_by_class, class_list, img_size,
     
     dataset = dataset.batch(batch_size, drop_remainder=True)
     
-    # 6. [핵심] Prefetch - GPU가 처리하는 동안 다음 배치 준비
+    # 6. Prefetch - GPU가 처리하는 동안 다음 배치 준비
     dataset = dataset.prefetch(buffer_size=prefetch_batches)
     
     return dataset
@@ -275,13 +275,13 @@ def create_triplet_dataset_optimized(paths_by_class, class_list, img_size,
 # --- 메인 학습 함수 ---
 def main():
     print("\n" + "="*60)
-    print("⚡ Siamese Network (GPU 최적화) 학습 시작")
+    print("Siamese Network (GPU 최적화) 학습 시작")
     print("="*60)
     
     # Mixed Precision 설정
     policy = mixed_precision.Policy('mixed_float16')
     mixed_precision.set_global_policy(policy)
-    print(f"✓ Mixed Precision: {policy.name}")
+    print(f" Mixed Precision: {policy.name}")
     
     # GPU 메모리 최적화
     gpus = tf.config.list_physical_devices('GPU')
@@ -289,9 +289,9 @@ def main():
         try:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"✓ GPU: {len(gpus)}개 감지")
+            print(f"GPU: {len(gpus)}개 감지")
         except RuntimeError as e:
-            print(f"⚠ GPU 설정 오류: {e}")
+            print(f"GPU 설정 오류: {e}")
     
     # 설정
     cfg.create_directories()
@@ -309,7 +309,7 @@ def main():
     total_train = 0
     total_validation = 0
     
-    print("\n📁 이미지 파일 스캔 중...")
+    print("\n이미지 파일 스캔 중...")
     for c in class_list:
         train_paths_by_class[c] = []
         for ext in extensions:
@@ -327,17 +327,17 @@ def main():
         
         print(f"  {c:15} → Train: {train_count:4}, Val: {validation_count:4}")
     
-    print(f"\n📊 총 이미지: Train={total_train}, Val={total_validation}")
+    print(f"\n총 이미지: Train={total_train}, Val={total_validation}")
     
     if total_train == 0 or total_validation == 0:
-        print("\n❌ 오류: 이미지가 없습니다.")
+        print("\n오류: 이미지가 없습니다.")
         return
     
     # [최적화] 데이터셋 생성
     BATCH_SIZE = 64  # GPU 사용률 높이기 위해 배치 크기 증가
     PREFETCH_BATCHES = 20  # GPU가 처리하는 동안 20개 배치 미리 준비
     
-    print(f"\n🔧 최적화된 데이터셋 생성 중...")
+    print(f"\n최적화된 데이터셋 생성 중...")
     print(f"   Batch Size: {BATCH_SIZE}")
     print(f"   Prefetch Batches: {PREFETCH_BATCHES}")
     
@@ -361,13 +361,13 @@ def main():
         prefetch_batches=10
     )
     
-    print("✓ 데이터셋 준비 완료")
+    print("데이터셋 준비 완료")
     
     # 모델 생성
     EMBEDDING_DIM = 128
     MARGIN = 0.5
     
-    print(f"\n🔨 모델 생성 중...")
+    print(f"\n모델 생성 중...")
     base_network = create_base_network((*IMG_SIZE_SIAMESE, 3), EMBEDDING_DIM)
     siamese_model = TripletLossModel(base_network, MARGIN)
     
@@ -376,7 +376,7 @@ def main():
         jit_compile=True  # XLA 컴파일
     )
     
-    print("\n📋 Base Network:")
+    print("\nBase Network:")
     trainable = sum([1 for l in base_network.layers if l.trainable])
     print(f"   총 레이어: {len(base_network.layers)}")
     print(f"   학습 가능: {trainable}")
@@ -405,7 +405,7 @@ def main():
     STEPS = (total_train + BATCH_SIZE - 1) // BATCH_SIZE
     VAL_STEPS = (total_validation + BATCH_SIZE - 1) // BATCH_SIZE
     
-    print(f"\n🚀 학습 시작:")
+    print(f"\n학습 시작:")
     print(f"   Epochs: {EPOCHS}")
     print(f"   Steps/Epoch: {STEPS}")
     print(f"   Validation Steps: {VAL_STEPS}")
@@ -424,14 +424,14 @@ def main():
     
     # 결과 저장
     print("\n" + "="*60)
-    print("✅ 학습 완료")
+    print("학습 완료")
     print("="*60)
     print(f"모델 저장: {save_path}")
     
     plot_path = cfg.MODEL_SAVE_DIR / "siamesenetwork" / cfg.SEED_DIR / "siamese_loss_plot.png"
     plot_siamese_history(history, plot_path)
     
-    print("\n모든 작업 완료! 🎉")
+    print("\n모든 작업 완료!")
 
 
 if __name__ == "__main__":

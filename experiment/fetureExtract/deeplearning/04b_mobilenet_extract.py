@@ -96,7 +96,7 @@ def main():
                 print("경고: 이미지가 없습니다.")
                 continue
                 
-            # [핵심 변경] 배치 처리 함수 사용 (batch_size=32)
+            # 배치 처리 함수 사용 (batch_size=32)
             features, failed_indices = extract_features_batch(
                 loaded_base_network, 
                 current_paths, 
@@ -110,7 +110,7 @@ def main():
 
             # 4. 저장
             save_dir = cfg.FEATURE_SAVE_DIR / "mobilenetv3" / cfg.SEED_DIR
-            save_dir.mkdir(parents=True, exist_ok=True) # 폴더 안전 생성
+            save_dir.mkdir(parents=True, exist_ok=True)  
             
             npy_path = save_dir / f"{c}_{s}_features.npy"
             json_path = save_dir / f"{c}_{s}_features.json"

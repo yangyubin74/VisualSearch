@@ -148,9 +148,7 @@ def load_image_128(image_path):
     preprocess = transforms.Compose([
         transforms.Resize((128, 128)),  # ★ 128x128로 리사이징
         transforms.ToTensor(),
-        # Autoencoder는 보통 입력 그대로 복원하므로 Normalize는 상황에 따라 뺍니다.
-        # 여기서는 0~1 범위를 유지하기 위해 ToTensor만 사용하거나,
-        # 성능을 위해 Normalize를 했다면 Decoder 끝에 역변환이 필요할 수 있습니다.
+       
     ])
 
     input_tensor = preprocess(input_image)

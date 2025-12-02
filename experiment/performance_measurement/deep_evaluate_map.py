@@ -28,10 +28,10 @@ def load_search_database(model_name: str, split='train'):
     all_db_features = []
     all_db_filenames = []
     
-    print(f"📂 '{model_name}' - '{split}' 데이터베이스 로드 중...")
+    print(f"'{model_name}' - '{split}' 데이터베이스 로드 중...")
     
     if not hasattr(config, 'CLASSES'):
-        print("❌ 오류: config.CLASSES가 정의되지 않았습니다.")
+        print("오류: config.CLASSES가 정의되지 않았습니다.")
         sys.exit(1)
 
     for class_name in config.CLASSES:
@@ -53,7 +53,7 @@ def load_search_database(model_name: str, split='train'):
             sys.exit(1)
 
     if not all_db_filenames:
-        print(f"  ❌ 오류: '{split}' 스플릿에 대한 데이터베이스 파일이 전혀 없습니다.")
+        print(f"  오류: '{split}' 스플릿에 대한 데이터베이스 파일이 전혀 없습니다.")
         print(f"  경로: {feature_dir}")
         print(f"  특징점 추출 스크립트(예: 04b_*.py)를 먼저 실행하세요.")
         sys.exit(1)
@@ -198,7 +198,7 @@ def evaluate_batch(
         results['Recall'].append(metrics['recall'])
     
     if skipped_count > 0:
-        print(f"  ⚠️ 경고: {skipped_count}개 쿼리가 카테고리 정보 부족으로 스킵됨")
+        print(f"  경고: {skipped_count}개 쿼리가 카테고리 정보 부족으로 스킵됨")
     
     return results
 
@@ -219,7 +219,7 @@ def main():
     
     total_queries = len(query_filenames)
     if total_queries == 0:
-        print("❌ 오류: 'test' 세트에 쿼리할 이미지가 없습니다.")
+        print("오류: 'test' 세트에 쿼리할 이미지가 없습니다.")
         return
 
     # 3. DB 카테고리별 문서 수 계산
@@ -249,7 +249,7 @@ def main():
 
     # 6. 최종 평균 계산 및 출력
     if not metrics_euclidean['mAP']:
-        print("❌ 오류: 유효한 평가 결과가 없습니다.")
+        print("    오류: 유효한 평가 결과가 없습니다.")
         print("  - DB와 쿼리의 카테고리가 일치하는지 확인하세요.")
         return
 
@@ -291,7 +291,7 @@ if __name__ == "__main__":
             MODEL_NAME = sys.argv[1]
             valid_models = ["efficientnet", "autoencoder", "siamesenetwork", "mobilenetv3"]
             if MODEL_NAME not in valid_models:
-                print(f"❌ 오류: '{MODEL_NAME}'은(는) 유효한 모델 이름이 아닙니다.")
+                print(f"  오류: '{MODEL_NAME}'은(는) 유효한 모델 이름이 아닙니다.")
                 print(f"  사용 가능: {valid_models}")
                 sys.exit(1)
         else:
@@ -302,6 +302,6 @@ if __name__ == "__main__":
         process_time(main)
 
     except Exception as e:
-        print(f"\n❌ 스크립트 실행 중 예외 발생: {e}")
+        print(f"\n 스크립트 실행 중 예외 발생: {e}")
         import traceback
         traceback.print_exc()

@@ -13,7 +13,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-# config.py와 common_config.py를 임포트 (SEED_DIR 때문에 common_config도 필요)
+
 import config 
 from common_utility import measure_process_time ,print_results,find_similar_images,calculate_metrics,extract_query_features,load_search_database
 
@@ -34,7 +34,7 @@ def load_feature_extractor():
     model_path = Path(config.MODEL_SAVE_DIR) / "mobilenetv3" / config.SEED_DIR / "base_network_best.h5"
     
     if not model_path.exists():
-        print(f"❌ 오류: MobileNetV3 Base Network 모델이 존재하지 않습니다: {model_path}")
+        print(f"  오류: MobileNetV3 Base Network 모델이 존재하지 않습니다: {model_path}")
         print(f"  '04a_mobilenet_train.py'를 먼저 실행하세요.")
         sys.exit(1)
     
@@ -132,7 +132,7 @@ if __name__ == "__main__":
             target_image_name = sys.argv[2]
             
             if not hasattr(config, 'TARGET_IMAGE_DEEPLEARNING_DIR'):
-                print("⚠️ 경고: 'config.py'에 'TARGET_IMAGE_DEEPLEARNING_DIR'가 없습니다.")
+                print("경고: 'config.py'에 'TARGET_IMAGE_DEEPLEARNING_DIR'가 없습니다.")
                 config.TARGET_IMAGE_DEEPLEARNING_DIR = Path('./target_images')
                 config.TARGET_IMAGE_DEEPLEARNING_DIR.mkdir(exist_ok=True)
             

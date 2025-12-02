@@ -130,7 +130,7 @@ if __name__ == "__main__":
             target_image_name = sys.argv[2]
             
             if not hasattr(config, 'TARGET_IMAGE_DEEPLEARNING_DIR'):
-                print("⚠️ 경고: 'common_config.py'에 'TARGET_IMAGE_DEEPLEARNING_DIR'가 없습니다.")
+                print("경고: 'common_config.py'에 'TARGET_IMAGE_DEEPLEARNING_DIR'가 없습니다.")
                 config.TARGET_IMAGE_DEEPLEARNING_DIR = Path('./target_images')
                 config.TARGET_IMAGE_DEEPLEARNING_DIR.mkdir(exist_ok=True)
             

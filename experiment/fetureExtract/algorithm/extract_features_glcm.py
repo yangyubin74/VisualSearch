@@ -85,7 +85,7 @@ def process_single_image(image_path, source_dirs, glcm_levels, shared_counter=No
         ops_count = 0
         if shared_counter is not None:
             counter = FLOPSCounter()
-            # common_utility에 count_glcm_ops 메서드가 구현되어 있어야 합니다.
+            
             ops_count = counter.count_glcm_ops(image.shape, glcm_levels)
         
         # GLCM 특징 추출
@@ -105,9 +105,7 @@ def batch_insert_to_db(cursor, results):
     success_count = 0
     error_count = 0
     
-    # results는 이제 (data_tuple, ops_count) 형식이므로 data_tuple만 추출
-    # data_tuple: (image_path, category, features_json, error_msg)
-    
+        
     for data_tuple in results:
         image_path, category, features_json, error_msg = data_tuple
         
@@ -161,14 +159,12 @@ def process_images(enable_flops=True):
         if enable_flops:
             print(f"FLOPS 측정: 활성화")
             
-        # 공유 카운터 설정 (멀티프로세싱용)
         manager = Manager()
         shared_counter = manager.Namespace() if enable_flops else None
         
         success_count = 0
         error_count = 0
         
-        # partial 함수로 고정 인자 전달 (shared_counter 추가)
         process_func = partial(
             process_single_image,
             source_dirs=SOURCE_DIRS,

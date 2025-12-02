@@ -11,7 +11,7 @@ def extract_features_batch_ae(encoder_model, image_paths, batch_size=32):
     feature_dim = encoder_model.output.shape[-1]
     features = np.zeros((num_images, feature_dim), dtype=np.float32)
     failed_indices = []
-    target_size = cfg.IMG_SIZE_AE  # Autoencoder용 이미지 크기
+    target_size = cfg.IMG_SIZE_AE   
     
     for i in tqdm(range(0, num_images, batch_size), desc="  배치 처리 중"):
         batch_paths = image_paths[i:i+batch_size]
@@ -32,7 +32,7 @@ def extract_features_batch_ae(encoder_model, image_paths, batch_size=32):
             try:
                 batch_array = np.array(batch_images)
                 
-                # [중요] Autoencoder 전처리: 0~1 사이로 정규화 (float32 변환 포함)
+                # Autoencoder 전처리: 0~1 사이로 정규화 (float32 변환 포함)
                 batch_preprocessed = batch_array.astype('float32') / 255.0
                 
                 # 예측

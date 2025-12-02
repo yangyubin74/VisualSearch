@@ -24,9 +24,6 @@ RELEVANT_CATEGORY = None
 TARGET_IMAGE_PATH = None
 TOTAL_RELEVANT_COUNT_MAP = config.TOTAL_RELEVANT_COUNT_MAP
 
-# [삭제] 단순 나누기 함수 제거
-# def preprocess_siamese_query(img_array):
-#     return img_array.astype('float32') / 255.0
 
 def load_feature_extractor():
     """학습된 Siamese Network의 'Base Network' 모델을 로드."""
@@ -40,7 +37,6 @@ def load_feature_extractor():
     print(f"특징 추출 모델(Base Network) 로드 중: {model_path.name}")
     feature_model = load_model(model_path)
     
-    # ... (출력 차원 확인 등 기존 로직 유지) ...
     if len(feature_model.output.shape) > 2:
         feature_model = Model(inputs=feature_model.input, outputs=feature_model.layers[-2].output)
         
@@ -73,11 +69,9 @@ def main():
     
     # 3. DB 로드
     print("\n[Step 3] Loading features from database...")
-    # model_name도 정확히 맞춰줍니다 (config.py 폴더명 기준 'siamesenetwork')
     db_features, db_filenames = load_search_database(split='train', model_name="siamesenetwork")
     print(f"Loaded {len(db_filenames)} images from database")
     
-    # ... (이하 4, 5, 6, 7 단계는 기존과 동일) ...
     
     # 4. Euclidean 거리로 검색
     print("\n[Step 4] Searching with Euclidean distance...")

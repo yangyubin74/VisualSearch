@@ -295,7 +295,7 @@ def main():
     # 설정 및 디렉토리
     cfg.create_directories()
     IMG_SIZE_MOBILENET = cfg.IMG_SIZE_MOBILENET 
-    print(f"✓ 이미지 크기: {IMG_SIZE_MOBILENET}")
+    print(f"이미지 크기: {IMG_SIZE_MOBILENET}")
     
     train_dir = cfg.BASE_IMAGE_DIR / "train"
     validation_dir = cfg.BASE_IMAGE_DIR / "validation"
@@ -370,12 +370,12 @@ def main():
     # Optimizer 최적화
     optimizer = tf.keras.optimizers.Adam(
         learning_rate=5e-5,
-        clipnorm=1.0  # Gradient clipping
+        clipnorm=1.0   
     )
     
     mobilenet_model.compile(
         optimizer=optimizer,
-        jit_compile=True  # XLA 컴파일
+        jit_compile=True  
     )
     
     print("\nBase Network 구조:")

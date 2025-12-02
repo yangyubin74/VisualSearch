@@ -152,7 +152,7 @@ def print_dataset_info(train_generator, validation_generator):
     return num_classes
 
 # -----------------------------------------------------------
-# ✅ 데이터 검증 함수
+# 데이터 검증 함수
 # -----------------------------------------------------------
 def validate_data(train_dir, validation_dir, train_generator):
     """데이터 경로 및 최소 요구사항을 검증."""
@@ -170,7 +170,7 @@ def validate_data(train_dir, validation_dir, train_generator):
     print("데이터 검증 완료")
 
 # -----------------------------------------------------------
-# 🚀 메인 학습 함수
+# 메인 학습 함수
 # -----------------------------------------------------------
 def main():
     print("\n" + "="*60)

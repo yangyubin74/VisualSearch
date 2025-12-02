@@ -1,6 +1,4 @@
-"""
-RGB 색공간 기반 Color Moment 특징 추출 및 DB 저장 (최적화 버전)
-"""
+
 import cv2
 import numpy as np
 import sqlite3

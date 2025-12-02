@@ -17,7 +17,7 @@ def extract_features_batch(feature_model, image_paths, batch_size=32):
     for i in tqdm(range(0, num_images, batch_size), desc="배치 처리"):
         batch_paths = image_paths[i:i+batch_size]
         batch_images = []
-        batch_indices = []
+        batch_indices = [] 
         
         # 배치 이미지 로드
         for j, img_path in enumerate(batch_paths):

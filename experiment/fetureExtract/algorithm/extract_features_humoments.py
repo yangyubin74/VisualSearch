@@ -88,7 +88,7 @@ def process_single_image(image_path, source_dirs, shared_counter=None):
         ops_count = 0
         if shared_counter is not None:
             counter = FLOPSCounter()
-            # common_utility에 count_hu_moments_ops 메서드가 구현되어 있어야 함
+            
             ops_count = counter.count_hu_moments_ops(image.shape)
         
         features = extract_hu_moments(image)

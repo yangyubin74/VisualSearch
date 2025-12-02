@@ -60,7 +60,7 @@ def main():
     # --- GPU 세션 생성 (실패 시 CPU로 폴백) ---
     print("Initializing rembg session (Attempting GPU)...")
     try:
-        # providers에 'CUDAExecutionProvider'를 명시하여 GPU 시도
+        
         session = new_session(providers=['CUDAExecutionProvider'])
         print(" GPU session (CUDAExecutionProvider) initialized successfully.")
     except Exception as e:

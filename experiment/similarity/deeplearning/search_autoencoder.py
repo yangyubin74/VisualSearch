@@ -43,7 +43,7 @@ def load_encoder_model():
     
     # 모델의 출력 차원을 확인.
     output_dim = feature_model.output.shape[-1]
-    print(f"  ✓ 특징 벡터 차원: {output_dim}")
+    print(f"  특징 벡터 차원: {output_dim}")
 
     # DB의 특징 벡터 차원(256)과 일치하는지 확인
     if output_dim != 256:

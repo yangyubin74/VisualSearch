@@ -22,7 +22,7 @@ def plot_ae_history(history, save_path):
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(str(save_path)) # Path 객체일 수 있으므로 str()로 변환
+    plt.savefig(str(save_path))  
     print(f"학습 그래프 저장 완료: {save_path}")
     plt.close()
 
@@ -31,7 +31,7 @@ def plot_ae_history(history, save_path):
 def load_and_preprocess_ae(path):
     """AE 학습용 데이터 로더"""
     img = tf.io.read_file(path)
-    # expand_animations=False 추가 (GIF 등 처리)
+ 
     img = tf.io.decode_image(img, channels=3, expand_animations=False) 
     img = tf.image.resize(img, [cfg.IMG_SIZE_AE[0], cfg.IMG_SIZE_AE[1]])
     img = tf.cast(img, tf.float32) / 255.0 # 0~1 정규화

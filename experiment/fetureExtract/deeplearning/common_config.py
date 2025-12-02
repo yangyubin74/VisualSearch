@@ -35,9 +35,9 @@ if gpus:
         # GPU 메모리 동적 할당
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        print(f"✅ GPU 감지: {len(gpus)}개")
+        print(f"GPU 감지: {len(gpus)}개")
     except RuntimeError as e:
-        print(f"⚠️ GPU 설정 오류: {e}")
+        print(f"GPU 설정 오류: {e}")
 
 
 print("공통 설정 로드됨.")

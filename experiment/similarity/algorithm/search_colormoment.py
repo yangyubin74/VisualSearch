@@ -190,9 +190,9 @@ def print_results(
     print("-" * 100)
     for item in euclidean_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}") # 정답 표시
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}") # 정답 표시
+        print(f"  Distance: {item['distance']:.6f}")
         print()
  
     # --- Manhattan 결과 ---
@@ -200,9 +200,9 @@ def print_results(
     print("-" * 100)
     for item in manhattan_results:
         print(f"Rank {item['rank']}:")
-        print(f"  📁 Path:     {item['image_path']}")
-        print(f"  🏷️  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}") # 정답 표시
-        print(f"  📏 Distance: {item['distance']:.6f}")
+        print(f"  Path:     {item['image_path']}")
+        print(f"  Category: {item['category']} {'<- [Relevant]' if item['category'] == relevant_category else ''}") # 정답 표시
+        print(f"  Distance: {item['distance']:.6f}")
         print()
  
     # --- 품질 지표(Metrics) 출력 ---

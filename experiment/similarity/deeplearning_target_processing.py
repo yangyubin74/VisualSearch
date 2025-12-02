@@ -123,7 +123,7 @@ def main():
             skip_count += 1
             continue
         
-        # 전처리 함수 호출 (🔧 수정: target_size 명시적 전달)
+        # 전처리 함수 호출 (수정: target_size 명시적 전달)
         try:
             preprocess_and_save(
                 input_path=input_file,
