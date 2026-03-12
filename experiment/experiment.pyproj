@@ -64,13 +64,6 @@
     <Compile Include="similarity\deeplearning\search_siamese.py" />
     <Compile Include="similarity\deeplearning\search_efficientnet.py" />
     <Compile Include="similarity\deeplearning_target_processing.py" />
-    <Compile Include="visualization\Figure_06.py" />
-    <Compile Include="visualization\Figure_07.py" />
-    <Compile Include="visualization\Figure_08.py" />
-    <Compile Include="visualization\Figure_09.py" />
-    <Compile Include="visualization\Figure_11.py" />
-    <Compile Include="visualization\Figure_14.py" />
-    <Compile Include="visualization\Figure_13.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
