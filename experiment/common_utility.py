@@ -774,6 +774,42 @@ class FLOPSCalculator:
         elapsed = time.time() - start
         return elapsed
 
+    # ▼▼▼ 여기에 추가 ▼▼▼
+    def _measure_inference_time_with_dataset(self, model, dataset, num_batches):
+        """tf.data.Dataset을 순회하며 전체 추론 시간 측정"""
+        start = time.time()
+        for i, batch in enumerate(dataset):
+            if i >= num_batches:
+                break
+            batch_x = batch[0] if isinstance(batch, tuple) else batch
+            _ = model(batch_x, training=False)
+        elapsed = time.time() - start
+        return elapsed
+    # ▲▲▲ 여기까지 ▲▲▲
+
+    def calculate_with_dataset(self, model, input_shape=None, model_name="Deep Learning Model",
+                            dataset=None, num_samples=0, num_batches=0):
+        """
+        [tf.data.Dataset 기반] 전체 이미지 추론 시간을 측정합니다.
+        """
+        if input_shape is None:
+            input_shape = (1,) + tuple(model.input_shape[1:])
+        if dataset is None:
+            raise ValueError("dataset이 필요합니다.")
+        if num_samples <= 0 or num_batches <= 0:
+            raise ValueError("num_samples와 num_batches는 0보다 커야 합니다.")
+
+        flops_per_image = self._get_flops(model, input_shape)
+
+        # 워밍업
+        for warmup_batch in dataset.take(1):
+            batch_x = warmup_batch[0] if isinstance(warmup_batch, tuple) else warmup_batch
+            _ = model(batch_x, training=False)
+
+        print(f"[FLOPSCalculator] 실제 이미지 {num_samples:,}장 ({num_batches} 배치) 추론 시간 측정 중...")
+        elapsed = self._measure_inference_time_with_dataset(model, dataset, num_batches)
+        return self._format_result(model_name, num_samples, flops_per_image, elapsed)
+
     @staticmethod
     def _convert_to_frozen(concrete_func):
         """ConcreteFunction을 frozen graph_def로 변환"""

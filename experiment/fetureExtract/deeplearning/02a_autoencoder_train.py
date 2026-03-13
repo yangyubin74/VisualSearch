@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose, Dense, Flatten, Reshape
@@ -10,6 +9,7 @@ import numpy as np
 from pathlib import Path
 
 import common_config as cfg
+from common_utility import FLOPSCalculator
 
 def plot_ae_history(history, save_path):
     """Autoencoder의 학습 히스토리를 시각화하여 파일로 저장."""
@@ -168,9 +168,25 @@ def main():
         callbacks=callbacks_list               
     )
 
+
     # 6. 최적 Encoder 모델 저장 (기존과 동일)
     print(f"\n--- [Autoencoder] 학습 완료 ---")
     print(f"가장 좋았던 Autoencoder 로드 중... ({autoencoder_save_path})")
+
+
+     # 7-1. FLOPS 측정
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate_with_dataset(
+    autoencoder,                               
+    input_shape=(1, *cfg.IMG_SIZE_AE, 3),       
+    model_name="Autoencoder",                  
+    dataset=train_dataset_ae,                  
+    num_samples=len(all_train_paths),          
+    num_batches=STEPS                          
+    )
+    print(flops)
+    print(f"{'='*60}\n")
+
 
     try:
         best_autoencoder = load_model(autoencoder_save_path)
