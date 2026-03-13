@@ -1,4 +1,3 @@
- 
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import EfficientNetB0
@@ -9,6 +8,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from tensorflow.keras.layers import Dropout
 
 import common_config as cfg
+from common_utility import FLOPSCalculator
 import matplotlib.pyplot as plt
 
 # -----------------------------------------------------------
@@ -81,7 +81,7 @@ def create_model(num_classes, fine_tune_layers=FINE_TUNE_LAYERS):
 # -----------------------------------------------------------
 # 데이터 생성기 구성 함수
 # -----------------------------------------------------------
-def create_data_generators(train_dir, validation_dir, use_augmentation= True):
+def create_data_generators(train_dir, validation_dir, use_augmentation=True):
     """훈련 및 검증 데이터 생성기를 구성합니다."""
     
     # 훈련 데이터 생성기
@@ -215,6 +215,16 @@ def main():
     print(f"학습 가능 파라미터: {trainable_params:,}")
     print(f"학습 비율: {100*trainable_params/total_params:.1f}%")
     print(f"Fine-tuning 레이어 수: {FINE_TUNE_LAYERS}")
+
+    # 7-1. FLOPS 측정
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate(
+        model, 
+        input_shape=(1, *cfg.IMG_SIZE_EFFICIENTNET, 3), 
+        model_name="EfficientNet",
+        data_generator=train_generator
+    )
+    print(flops)
     print(f"{'='*60}\n")
 
     # 8. 컴파일

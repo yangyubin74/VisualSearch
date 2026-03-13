@@ -603,7 +603,6 @@ class FLOPSCounter:
             flops_per_image=flops_per_image
         )
 
-
 def measure_process_time_with_flops(func, flops_counter: Optional[FLOPSCounter] = None):
     """
     실행 시간과 FLOPS를 함께 측정하는 함수
@@ -651,3 +650,148 @@ def measure_process_time_with_flops(func, flops_counter: Optional[FLOPSCounter] 
         return None
 
 # ============================== FLOPS 측정 관련 함수 [E] ==============================
+
+# ============================== 딥러닝 모델 FLOPS 측정 클래스 [S] ==============================
+import tensorflow as tf
+
+class FLOPSCalculator:
+    """TensorFlow/Keras 모델의 FLOPS를 측정하는 클래스"""
+
+    def calculate(self, model, input_shape=None, model_name="Deep Learning Model", data_generator=None):
+        """
+        [학습 스크립트용] Keras ImageDataGenerator 기반으로 전체 이미지 추론 시간을 측정합니다.
+
+        Args:
+            model: tf.keras.Model 인스턴스
+            input_shape: 입력 형상 튜플 (예: (1, 224, 224, 3)).
+            model_name: 출력에 표시할 모델 이름
+            data_generator: Keras ImageDataGenerator (실제 이미지를 순회하며 추론)
+
+        Returns:
+            str: 상세 FLOPS 통계 문자열
+        """
+        if input_shape is None:
+            input_shape = (1,) + tuple(model.input_shape[1:])
+
+        flops_per_image = self._get_flops(model, input_shape)
+
+        if data_generator is None:
+            raise ValueError("data_generator가 필요합니다. 실제 이미지 데이터를 전달해주세요.")
+
+        num_samples = data_generator.samples
+        num_batches = len(data_generator)
+
+        # 워밍업
+        warmup_batch = next(iter(data_generator))
+        _ = model(warmup_batch[0], training=False)
+        data_generator.reset()
+
+        print(f"[FLOPSCalculator] 실제 이미지 {num_samples:,}장 ({num_batches} 배치) 추론 시간 측정 중...")
+        elapsed = self._measure_inference_time_with_generator(model, data_generator, num_batches)
+
+        return self._format_result(model_name, num_samples, flops_per_image, elapsed)
+
+    def calculate_from_extraction(self, model, input_shape, model_name, num_samples, elapsed_time):
+        """
+        [특징 추출 스크립트용] 이미 실행된 추출 루프의 시간과 이미지 수를 받아 FLOPS를 계산합니다.
+
+        Args:
+            model: tf.keras.Model 인스턴스 (FLOPs 계산용)
+            input_shape: 입력 형상 튜플 (예: (1, 224, 224, 3))
+            model_name: 출력에 표시할 모델 이름
+            num_samples: 실제 처리한 전체 이미지 수
+            elapsed_time: 전체 추출에 걸린 시간 (초)
+
+        Returns:
+            str: 상세 FLOPS 통계 문자열
+        """
+        flops_per_image = self._get_flops(model, input_shape)
+        return self._format_result(model_name, num_samples, flops_per_image, elapsed_time)
+
+    def _format_result(self, model_name, num_samples, flops_per_image, elapsed):
+        """공통 출력 포맷"""
+        total_ops = flops_per_image * num_samples
+        avg_ops = flops_per_image
+        avg_time = elapsed / num_samples if num_samples > 0 else 0.0
+        total_flops_per_sec = total_ops / elapsed if elapsed > 0 else 0.0
+        total_gflops = total_flops_per_sec / 1e9
+        avg_flops_per_sec = avg_ops / avg_time if avg_time > 0 else 0.0
+        avg_gflops = avg_flops_per_sec / 1e9
+
+        sep = "=" * 80
+        result = (
+            f"\n{sep}\n"
+            f" {model_name} Feature Extraction - Aggregated FLOPS Statistics\n"
+            f"{sep}\n"
+            f"Sample Count:       {num_samples:,}\n"
+            f"Total Operations:   {total_ops:,} ops\n"
+            f"Total Time:         {elapsed:.4f} seconds\n"
+            f"Avg Operations:     {avg_ops:,} ops\n"
+            f"Avg Time:           {avg_time:.6f} seconds\n"
+            f"Total FLOPS:        {total_flops_per_sec:,.0f} ops/sec\n"
+            f"Total GFLOPS:       {total_gflops:.4f} GFLOPS\n"
+            f"{sep}\n"
+            f"\n{sep}\n"
+            f" 상세 성능 분석\n"
+            f"{sep}\n"
+            f"이미지당 평균 연산:\n"
+            f"  Operations:       {avg_ops:,} ops\n"
+            f"  Time:             {avg_time:.6f} seconds\n"
+            f"  FLOPS:            {avg_flops_per_sec:,.0f} ops/sec\n"
+            f"  GFLOPS:           {avg_gflops:.4f} GFLOPS\n"
+            f"{sep}\n"
+        )
+        return result
+
+    def _get_flops(self, model, input_shape):
+        """모델의 1장당 FLOPs를 계산하여 정수값으로 반환"""
+        try:
+            forward_pass = tf.function(model.call, input_signature=[
+                tf.TensorSpec(shape=input_shape, dtype=tf.float32)
+            ])
+            concrete_func = forward_pass.get_concrete_function()
+            frozen_func, graph_def = self._convert_to_frozen(concrete_func)
+
+            with tf.Graph().as_default() as graph:
+                tf.graph_util.import_graph_def(graph_def, name='')
+                run_meta = tf.compat.v1.RunMetadata()
+                opts = tf.compat.v1.profiler.ProfileOptionBuilder.float_operation()
+                flops_info = tf.compat.v1.profiler.profile(
+                    graph=graph, run_meta=run_meta, cmd='op', options=opts
+                )
+                return flops_info.total_float_ops
+        except Exception as e:
+            print(f"[FLOPSCalculator] tf.profiler 방식 실패, 추정 방식으로 전환: {e}")
+            return self._estimate_flops_raw(model)
+
+    def _measure_inference_time_with_generator(self, model, data_generator, num_batches):
+        """실제 데이터 generator를 순회하며 전체 추론 시간 측정"""
+        data_generator.reset()
+        start = time.time()
+        for i in range(num_batches):
+            batch_x, _ = next(data_generator)
+            _ = model(batch_x, training=False)
+        elapsed = time.time() - start
+        return elapsed
+
+    @staticmethod
+    def _convert_to_frozen(concrete_func):
+        """ConcreteFunction을 frozen graph_def로 변환"""
+        from tensorflow.python.framework.convert_to_constants import (
+            convert_variables_to_constants_v2,
+        )
+        frozen_func = convert_variables_to_constants_v2(concrete_func)
+        graph_def = frozen_func.graph.as_graph_def()
+        return frozen_func, graph_def
+
+    @staticmethod
+    def _estimate_flops_raw(model) -> int:
+        """profiler 사용이 불가능할 때 레이어별 대략적 FLOPs 추정 (정수 반환)"""
+        total_flops = 0
+        for layer in model.layers:
+            if hasattr(layer, 'kernel') and layer.kernel is not None:
+                w_shape = layer.kernel.shape
+                total_flops += 2 * int(np.prod(w_shape))
+        return total_flops
+
+# ============================== 딥러닝 모델 FLOPS 측정 클래스 [E] ==============================

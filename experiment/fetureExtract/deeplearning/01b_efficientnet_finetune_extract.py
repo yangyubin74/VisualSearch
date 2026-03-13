@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications.efficientnet import preprocess_input
@@ -6,6 +7,7 @@ from tqdm import tqdm
 import os
 import common_config as cfg
 import json
+from common_utility import FLOPSCalculator
 
 def extract_features_batch(feature_model, image_paths, batch_size=32):
     """배치 단위로 특징 추출"""
@@ -114,6 +116,9 @@ def main():
         'validation_failed': 0
     }
     
+    # ★ FLOPS 측정용: 전체 추출 시간 측정 시작
+    extraction_start_time = time.time()
+    
     for c in cfg.SPLITS:
         for s in cfg.CLASSES:
             print(f"\n{'─'*60}")
@@ -154,22 +159,13 @@ def main():
             else:
                 total_stats['validation_failed'] += 1
             
-            # 저장
-            save_path = cfg.FEATURE_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / f"{c}_{s}_features.npy"
-            np.save(save_path, features)
-            print(f"   저장 완료: {save_path.name}")
-            print(f"   형태: {features.shape}, 타입: {features.dtype}")
-
             # .npy 특징 벡터 저장
             save_path = cfg.FEATURE_SAVE_DIR / "efficientnet"/cfg.SEED_DIR / f"{c}_{s}_features.npy"
             np.save(save_path, features)
             print(f"   특징 벡터 저장 완료: {save_path.name}")
             print(f"   형태: {features.shape}, 타입: {features.dtype}")
 
-              
-          
-              # .json 파일명 리스트 저장
-              # (예: "train_shirt_features.npy" -> "train_shirt_features.json")
+            # .json 파일명 리스트 저장
             filename_save_path = save_path.with_suffix('.json')
             try:
                 with open(filename_save_path, 'w', encoding='utf-8') as f:
@@ -177,8 +173,9 @@ def main():
                 print(f"   파일명 리스트 저장 완료: {filename_save_path.name}")
             except Exception as e:
                 print(f"   파일명 리스트 저장 실패: {e}")
-          
-          
+    
+    # ★ FLOPS 측정용: 전체 추출 시간 측정 종료
+    extraction_elapsed_time = time.time() - extraction_start_time
     
     # 5. 최종 통계 출력
     print(f"\n{'='*60}")
@@ -188,7 +185,19 @@ def main():
     print(f"   처리 실패:          {total_stats['failed']:,}개 "
           f"({100*total_stats['failed']/max(total_stats['processed'],1):.2f}%)")
     print(f"   검증 통과:          {total_stats['validation_passed']}개 세트")
-    print(f"   검증 실패:          {total_stats['validation_failed']}개 세트")
+    print(f"   검증 실패:          {total_stats['validation_failed']}개 세트") 
+
+    # 6. FLOPS 측정 결과 출력
+    flops_calculator = FLOPSCalculator()
+    flops_result = flops_calculator.calculate_from_extraction(
+        model=feature_model,
+        input_shape=(1, *cfg.IMG_SIZE_EFFICIENTNET, 3),
+        model_name="EfficientNet",
+        num_samples=total_stats['processed'],
+        elapsed_time=extraction_elapsed_time
+    )
+    print(flops_result)
+
     print(f"\n 모든 특징 추출 완료!\n")
 
 

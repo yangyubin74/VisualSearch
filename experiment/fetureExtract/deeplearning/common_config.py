@@ -27,7 +27,8 @@ np.random.seed(SEED)
 tf.random.set_seed(SEED)
 
 # (TensorFlow 2.x 에서 GPU 관련 결정성을 보장하기 위한 추가 옵션)
-os.environ['TF_DETERMINISTIC_OPS'] = '0'
+# 재현성: 1은 결정적 연산을 활성화하지만, 일부 GPU 연산이 느려질 수 있음
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
 
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
