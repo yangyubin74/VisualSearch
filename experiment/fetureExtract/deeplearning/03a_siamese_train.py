@@ -18,6 +18,9 @@ import random
 
 import common_config as cfg
 
+from common_utility import FLOPSCalculator
+
+
 # --- 시각화 함수 ---
 def plot_siamese_history(history, save_path):
     """Siamese Network의 학습 히스토리를 시각화하여 파일로 저장."""
@@ -427,6 +430,34 @@ def main():
     print("학습 완료")
     print("="*60)
     print(f"모델 저장: {save_path}")
+    
+    # 7-1. FLOPS 측정
+    # Siamese triplet dataset은 {"anchor","positive","negative"} 딕셔너리 구조라
+    # base_network(단일 이미지 입력)에 직접 넣을 수 없으므로,
+    # FLOPS 측정용 단일 이미지 dataset을 별도로 생성
+    all_train_paths = []
+    for c in class_list:
+        all_train_paths.extend(train_paths_by_class[c])
+
+    flops_dataset = tf.data.Dataset.from_tensor_slices(all_train_paths)
+    flops_dataset = flops_dataset.map(
+        lambda path: (load_and_preprocess_image_tf(path, IMG_SIZE_SIAMESE, augment=False), 0.0),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    flops_dataset = flops_dataset.batch(BATCH_SIZE, drop_remainder=True)
+    flops_dataset = flops_dataset.prefetch(tf.data.AUTOTUNE)
+
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate_with_dataset(
+        base_network,
+        input_shape=(1, *cfg.IMG_SIZE_SIAMESE, 3),
+        model_name="Siamese Network",
+        dataset=flops_dataset,
+        num_samples=total_train,
+        num_batches=total_train // BATCH_SIZE
+    )
+    print(flops)
+    print(f"{'='*60}\n")
     
     plot_path = cfg.MODEL_SAVE_DIR / "siamesenetwork" / cfg.SEED_DIR / "siamese_loss_plot.png"
     plot_siamese_history(history, plot_path)
