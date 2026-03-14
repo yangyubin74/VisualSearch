@@ -12,6 +12,7 @@ import random
 
 import common_config as cfg
 
+from common_utility import FLOPSCalculator
 
 # --- GPU 최적화 설정 ---
 def setup_gpu_optimization():
@@ -441,6 +442,32 @@ def main():
     print(" [MobileNetV3] 학습 완료")
     print("="*60)
     print(f" 최적의 Base Network 모델 저장 완료: {base_network_save_path}")
+
+
+    # 7-1. FLOPS 측정
+    all_train_paths = []
+    for c in class_list:
+        all_train_paths.extend(train_paths_by_class[c])
+
+    flops_dataset = tf.data.Dataset.from_tensor_slices(all_train_paths)
+    flops_dataset = flops_dataset.map(
+        lambda path: (load_and_preprocess_mobilenet(path, augment=False), 0.0),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    flops_dataset = flops_dataset.batch(BATCH_SIZE, drop_remainder=True)
+    flops_dataset = flops_dataset.prefetch(tf.data.AUTOTUNE)
+
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate_with_dataset(
+        base_network,
+        input_shape=(1, *IMG_SIZE_MOBILENET, 3),
+        model_name="MobileNetV3",
+        dataset=flops_dataset,
+        num_samples=total_train,
+        num_batches=total_train // BATCH_SIZE
+    )
+    print(flops)
+    print(f"{'='*60}\n")
     
     plot_save_path = cfg.MODEL_SAVE_DIR / "mobilenetv3" / cfg.SEED_DIR / "mobilenet_loss_plot.png"
     plot_mobilenet_history(history, plot_save_path)
