@@ -2,9 +2,12 @@ import tensorflow as tf
 import numpy as np
 import common_config as cfg
 import json
+import time
 from tqdm import tqdm
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications.mobilenet_v3 import preprocess_input
+
+from common_utility import FLOPSCalculator
 
 def extract_features_batch(feature_model, image_paths, batch_size=32):
     """[최적화] 배치 단위 특징 추출 (Siamese용)"""
@@ -68,6 +71,8 @@ def main():
     
     total_processed = 0
     
+    extraction_start = time.time()
+
     for c in cfg.SPLITS:
         for s in cfg.CLASSES:
             print(f"\nSiamese: '{c}' / '{s}' 처리 중...")
@@ -98,6 +103,20 @@ def main():
 
             total_processed += len(current_paths)
     
+    extraction_elapsed = time.time() - extraction_start
+
+    # 7-1. FLOPS 측정
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate_from_extraction(
+        loaded_base_network,
+        input_shape=(1, *cfg.IMG_SIZE_SIAMESE, 3),
+        model_name="Siamese Network (Base Network)",
+        num_samples=total_processed,
+        elapsed_time=extraction_elapsed
+    )
+    print(flops)
+    print(f"{'='*60}\n")
+
     print("\n" + "="*60)
     print(f"총 {total_processed}개 처리 완료")
     print("="*60)

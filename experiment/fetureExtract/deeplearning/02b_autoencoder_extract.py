@@ -2,8 +2,11 @@ import tensorflow as tf
 import numpy as np
 import common_config as cfg
 import json
+import time
 from tqdm import tqdm
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
+
+from common_utility import FLOPSCalculator
 
 def extract_features_batch_ae(encoder_model, image_paths, batch_size=32):
     """[최적화] 배치 단위 특징 추출 (Autoencoder용)"""
@@ -64,7 +67,9 @@ def main():
     
     total_processed = 0
     
-    for c in cfg.SPLITS:
+    extraction_start = time.time()
+
+    for c in cfg.SPLITS:    
         for s in cfg.CLASSES:
             print(f"\n[클래스: {c} / {s}]")
             current_paths = image_paths[c][s]
@@ -75,7 +80,7 @@ def main():
             # [핵심] 배치 처리 함수 호출
             features, failed_indices = extract_features_batch_ae(
                 encoder, 
-                current_paths, 
+                current_paths,  
                 batch_size=32
             )
             
@@ -95,6 +100,20 @@ def main():
 
             total_processed += len(current_paths)
     
+    extraction_elapsed = time.time() - extraction_start
+
+    # 7-1. FLOPS 측정
+    flops_calculator = FLOPSCalculator()
+    flops = flops_calculator.calculate_from_extraction(
+        encoder,
+        input_shape=(1, *cfg.IMG_SIZE_AE, 3),
+        model_name="Autoencoder (Encoder)",
+        num_samples=total_processed,        
+        elapsed_time=extraction_elapsed
+    )
+    print(flops)
+    print(f"{'='*60}\n")
+
     print("\n" + "="*60)
     print(f"  [Autoencoder] 특징 추출 완료: {total_processed}개")
     print("="*60)
