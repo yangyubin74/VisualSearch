@@ -43,7 +43,7 @@ SOURCE_ALGORITHM_DIRS = [
 
 #========================딥러닝관련 옵션 [S]=========================
  # 1st : 45 , 2nd : 46, 3rd : 47
-SEED=45
+SEED=47 
 SEED_DIR = f"randomseed_{SEED}"
 
 
