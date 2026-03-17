@@ -831,3 +831,17 @@ class FLOPSCalculator:
         return total_flops
 
 # ============================== 딥러닝 모델 FLOPS 측정 클래스 [E] ==============================
+
+
+def print_compact_table(results, distance_type, relevant_category):
+    print(f"\n{'='*80}")
+    print(f" {distance_type} - Compact Results")
+    print(f"{'='*80}")
+    print(f" {'Rank':<6} | {'Filename':<45} | {'Category':<10} | {'Distance':>10}")
+    print(f"{'-'*80}")
+    for item in results:
+        filename = Path(item['image_path']).name
+        category = item['category']
+        marker = " *" if category == relevant_category else ""
+        print(f" {item['rank']:<6} | {filename:<45} | {category:<10} | {item['distance']:>10.6f}{marker}")
+    print(f"{'='*80}")

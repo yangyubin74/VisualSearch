@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 
 import config 
-from common_utility import measure_process_time ,print_results,find_similar_images,calculate_metrics,extract_query_features,load_search_database
+from common_utility import measure_process_time ,print_results,find_similar_images,calculate_metrics,extract_query_features,load_search_database,print_compact_table
 
 # --- 설정값 ---
 TOP_K = config.TOP_K
@@ -116,6 +116,10 @@ def main():
         RELEVANT_CATEGORY
     )
     
+    # 7-1. 간결한 테이블 형식 출력
+    print_compact_table(euclidean_results, "EUCLIDEAN", RELEVANT_CATEGORY)
+    print_compact_table(manhattan_results, "MANHATTAN", RELEVANT_CATEGORY)
+
     # 8. colormoment/efficientnet과 동일하게 dict 반환
     return {
         'euclidean_results': euclidean_results,
